@@ -12,5 +12,4 @@ graph TD
   E --> G[Payment Service - Stripe or PayPal]
   E --> H[Response Sent to Client]
 ```
-We enforce that users can only register with valid Gmail addresses and strong passwords before proceeding to route logic.
 
