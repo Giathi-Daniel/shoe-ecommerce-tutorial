@@ -13,6 +13,5 @@ graph TD
   G2 --> H
   H --> I[JWT Token and Redirect to Checkout]
   I --> J[Checkout Page]
-
-The frontend blocks weak passwords and non-Gmail addresses before calling the backend authentication API.
 ```
+The frontend uses reusable components, enforces password and email validation (blocking weak passwords and non-Gmail addresses), and implements conditional routing based on login status and cart state before calling the backend authentication API.
