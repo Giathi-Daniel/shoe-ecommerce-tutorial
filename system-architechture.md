@@ -1,4 +1,4 @@
-# 🏗️ System Architecture Diagram (High Level)
+## System Architecture Diagram (High Level)
 
 ```mermaid
 graph TD
@@ -8,4 +8,3 @@ graph TD
   B -->|Docker Image| E[ECR (Elastic Container Registry)]
   E -->|Image Pull| F[AWS Fargate (Container Runtime)]
   F --> B
-
