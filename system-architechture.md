@@ -8,3 +8,4 @@ graph TD
   B -->|Docker Image| E[ECR (Elastic Container Registry)]
   E -->|Image Pull| F[AWS Fargate (Container Runtime)]
   F --> B
+```
