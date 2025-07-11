@@ -8,6 +8,5 @@ graph LR
   D --> E[Backend Deployed]
   F[Frontend Code] --> G[Vercel Git Integration]
   G --> H[Vercel Deploys React App]
-  
- Backend is containerized and deployed via ECR and Fargate. Frontend is auto-deployed by Vercel from GitHub commits.
  ```
+Backend is containerized and deployed via ECR and Fargate. Frontend is auto-deployed by Vercel from GitHub commits.
