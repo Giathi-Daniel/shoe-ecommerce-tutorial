@@ -25,6 +25,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'))
+app.use('/api/products', require('./routes/productRoutes'))
 
 // Err Handler
 app.use(errorHandler)

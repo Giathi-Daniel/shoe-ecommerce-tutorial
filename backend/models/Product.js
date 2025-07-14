@@ -4,7 +4,7 @@ const productSchema = new mongoose.Schema(
     {
         name: {
             type: String,
-            required: true,
+            required: [true, 'Product name is required'],
             trim: true,
         },
         description: {
@@ -15,19 +15,37 @@ const productSchema = new mongoose.Schema(
         price: {
             type: Number,
             required: true,
+            min: [0, 'Price cannot be negative'],
         },
         category: {
             type: String,
             required: true,
+            enum: ['men', 'women', 'kids', 'sports', 'casual', 'formal']
         },
-        imageUrl: {
+        mainImage: {
             type: String,
             required: true,
+        },
+        subImages: {
+            type: [String],
+            validate: [arr => arr.length <= 4, 'Max 4 sub images'],
         },
         stock: {
             type: Number,
             required: true,
             default: 0,
+        },
+        brand: {
+            type: String,
+            default: 'Generic',
+        },
+        tags: {
+            type: [String],
+            default: [],
+        },
+        isFeatured: {
+            type: Boolean,
+            default: false,
         },
     },
     {
@@ -35,5 +53,4 @@ const productSchema = new mongoose.Schema(
     }
 );
 
-const Product = mongoose.model('Product', productSchema)
-module.exports = Product
+module.exports = mongoose.model('Product', productSchema)
