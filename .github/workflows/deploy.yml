@@ -1,0 +1,110 @@
+name: Build and Deploy to AWS ECS Fargate
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  CLUSTER_NAME: ecommerce-cluster
+
+jobs:
+  deploy:
+    name: Deploy Frontend and Backend to ECS Fargate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      #####################
+      # FRONTEND BUILD + DEPLOY
+      #####################
+      - name: Build and Push Frontend Image
+        run: |
+          FRONTEND_REPO=${{ secrets.ECR_REPOSITORY_FRONTEND }}
+          IMAGE_TAG="${{ steps.login-ecr.outputs.registry }}/${FRONTEND_REPO}:latest"
+          docker build -t $IMAGE_TAG ./frontend
+          docker push $IMAGE_TAG
+          echo "FRONTEND_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Deploy Frontend to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: |
+            {
+              "family": "ecommerce-frontend-task",
+              "networkMode": "awsvpc",
+              "requiresCompatibilities": ["FARGATE"],
+              "cpu": "256",
+              "memory": "512",
+              "containerDefinitions": [
+                {
+                  "name": "frontend",
+                  "image": "${{ env.FRONTEND_IMAGE }}",
+                  "portMappings": [
+                    {
+                      "containerPort": 5173,
+                      "protocol": "tcp"
+                    }
+                  ],
+                  "essential": true
+                }
+              ],
+              "executionRoleArn": "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole"
+            }
+          service: ecommerce-frontend-service
+          cluster: ${{ env.CLUSTER_NAME }}
+          wait-for-service-stability: true
+
+      #####################
+      # BACKEND BUILD + DEPLOY
+      #####################
+      - name: Build and Push Backend Image
+        run: |
+          BACKEND_REPO=${{ secrets.ECR_REPOSITORY_BACKEND }}
+          IMAGE_TAG="${{ steps.login-ecr.outputs.registry }}/${BACKEND_REPO}:latest"
+          docker build -t $IMAGE_TAG ./backend
+          docker push $IMAGE_TAG
+          echo "BACKEND_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Deploy Backend to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: |
+            {
+              "family": "ecommerce-backend-task",
+              "networkMode": "awsvpc",
+              "requiresCompatibilities": ["FARGATE"],
+              "cpu": "256",
+              "memory": "512",
+              "containerDefinitions": [
+                {
+                  "name": "backend",
+                  "image": "${{ env.BACKEND_IMAGE }}",
+                  "portMappings": [
+                    {
+                      "containerPort": 5000,
+                      "protocol": "tcp"
+                    }
+                  ],
+                  "essential": true
+                }
+              ],
+              "executionRoleArn": "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole"
+            }
+          service: ecommerce-backend-service
+          cluster: ${{ env.CLUSTER_NAME }}
+          wait-for-service-stability: true
