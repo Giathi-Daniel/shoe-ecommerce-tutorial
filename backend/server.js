@@ -26,6 +26,8 @@ mongoose.connect(process.env.MONGODB_URI)
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'))
 app.use('/api/products', require('./routes/productRoutes'))
+app.use('/api/cart', require('./routes/cartRoutes'))
+app.use('/api/wishlist', require('./routes/wishlistRoutes'))
 
 // Err Handler
 app.use(errorHandler)
