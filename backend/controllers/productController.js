@@ -39,3 +39,46 @@ exports.getProducts = async(req, res, next) => {
         next(err)
     }
 }
+
+// GET /api/products/:id
+exports.getSingleProduct = async (req, res, next) => {
+    try {
+        const product = await Product.findById(req.params.id)
+        if(!product) {
+            return res.status(404).json({ message: 'Product not found' })
+        } 
+        res.status(200).json({ success: true, product })
+    } catch (err) {
+        next(err)
+    }
+};
+
+// PUT /api/products/:id
+exports.updateProduct = async(req, res, next) => {
+    try {
+        const product = await Product.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if(!product) {
+            return res.status(400).json({ message: 'Product not found' })
+        }
+        res.status(200).json({ success: true, product });
+    } catch(err) {
+        next(err);
+    }
+};
+
+// DELETE /api/products/:id
+exports.deleteProduct = async (req, res, next) => {
+    try {
+        const product = await Product.findByIdAndDelete(req.params.id)
+        if(!product) {
+            return res.status(404).json({ message: 'product not found' })
+        }
+        res.status(200).json({ success: true, message: 'Product deleted' })
+    } catch (err) {
+        next(err)
+    }
+};
