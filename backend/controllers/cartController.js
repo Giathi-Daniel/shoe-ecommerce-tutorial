@@ -1,5 +1,6 @@
 const Cart = require('../models/Cart')
 const Product = require('../models/Product')
+const { calculateTotal } = require('../utils/cartUtils')
 
 // Add item to cart
 exports.addToCart = async(req, res, next) => {
@@ -23,12 +24,12 @@ exports.addToCart = async(req, res, next) => {
             if(itemIndex > -1) {
                 cart.items[itemIndex].quantity += quantity;
             } else {
-                cart.items.push({ productId, name: product.name, price: product.price, image: product.mainImage })
+                cart.items.push({ productId, name: product.name, price: product.price, image: product.mainImage, quantity })
             }
         }
 
         await cart.save();
-        res.status(200).json({ success: true, cart })
+        res.status(200).json({ success: true, cart, total: calculateTotal(cart) })
     } catch (err) {
         next(err)
     }
@@ -46,7 +47,10 @@ exports.removeFromCart = async(req, res, next) => {
         cart.items = cart.items.filter(i => i.productId.toString() !== productId);
         await cart.save();
 
-        res.status(200).json({ success: true, cart })
+        res.status(200).json({ 
+            success: true, 
+            cart: { ...cart._doc, total: calculateTotal(cart)}
+        })
     } catch(err) {
         next(err)
     } 
@@ -55,8 +59,9 @@ exports.removeFromCart = async(req, res, next) => {
 // Get cart
 exports.getCart = async(req, res, next) => {
     try {
-        const cart = await Cart.findOne({ userId: req.user.id })
-        res.status(200).json({ sucess: true, cart: cart || { items: []  } })
+        const cart = await Cart.findOne({ userId: req.user.id });
+        const total = cart ? calculateTotal(cart) : 0;
+        res.status(200).json({ success: true, cart: cart || { items: [] }, total})
     } catch(err) {
         next(err)
     }
@@ -78,7 +83,49 @@ exports.updateQuantity = async(req, res, next) => {
         cart.items[itemIndex].quantity = quantity
         await cart.save();
 
-        res.status(200).json({ success: true, cart })
+        res.status(200).json({ success: true, cart, total: calculateTotal(cart) })
+    } catch(err) {
+        next(err)
+    }
+}
+
+// PATCH /api/cart/:productId/increment
+exports.incrementItem = async(req, res, next) => {
+    try {
+        const { productId } = req.params;
+        const cart = await Cart.findOne({ userId: req.user.id });
+        if(!cart) return res.status(404).json({ message: 'Cart not found'});
+
+        const item = cart.items.find(i => i.productId.toString() === productId)
+        if(!item) return res.status(404).json({ message: 'Item not found in cart' })
+
+        item.quantity += 1;
+        await cart.save()
+
+        res.status(200).json({ success: true, cart, total: calculateTotal(cart)})
+    } catch(err) {
+        next(err)
+    }
+}
+
+// PATCH /api/cart/:productId/decrement
+exports.decrementItem = async (req, res, next) => {
+    try {
+        const { productId } = req.params;
+        const cart = await Cart.findOne({ userId: req.user.id });
+        if(!cart) return res.status(404).json({ message: 'Cart not found' })
+
+        const item = cart.items.find(i => i.productId.toString() === productId)
+        if(!item) return res.status(404).json({ message: 'Item not found in cart' })
+
+        if(item.quantity > 1) {
+            item.quantity -= 1;
+        } else {
+            cart.items = cart.items.filter(i => i.productId.toString() !== productId)
+        }
+
+        await cart.save()
+        res.status(200).json({ success: true, cart, total: calculateTotal(cart) })
     } catch(err) {
         next(err)
     }
