@@ -31,7 +31,7 @@ exports.addToWishlist = async(req, res, next) => {
 };
 
 // Remove from wishlist
-exports.removeFromWIshlist = async(req, res, next) => {
+exports.removeFromWishlist = async(req, res, next) => {
     try {
         const { productId } = req.params;
         const wishlist = await Wishlist.findOne({ userId: req.user.id });
