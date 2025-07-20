@@ -9,26 +9,26 @@ const morgan = require('morgan')
 const mongoSanitize = require('express-mongo-sanitize')
 const hpp = require('hpp');
 const { apiLimiter } = require('./middleware/rateLimiter');
-const cors = require('cors'); 
+const cors = require('cors');
 
 const allowedOrigins = [
-    // 'https://not-yet.vercel.app', 
+    // 'https://not-yet.vercel.app',
     'http://localhost:3000'
-]; 
+];
 
 dotenv.config()
 
 const app = expres()
 
-app.use(cors({ 
-    origin: (origin, callback) => { 
-        if (!origin || allowedOrigins.includes(origin)) { 
-            callback(null, true); 
-        } else { 
-            callback(new Error('Not allowed by CORS')); 
-        } 
-    }, 
-    credentials: true, 
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
 }));
 
 // Middleware
