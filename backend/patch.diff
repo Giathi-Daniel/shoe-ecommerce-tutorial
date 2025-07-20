@@ -1,0 +1,339 @@
+From d709f7f637382c77c06503d163d116453461bb40 Mon Sep 17 00:00:00 2001
+From: Daniel Giathi <giathidaniel252@gmail.com>
+Date: Sun, 20 Jul 2025 20:46:16 +0300
+Subject: [PATCH] Added rate limiting for api call, HPP, mongo sanitization,
+ CORS, and validator-based input checks
+
+---
+ backend/controllers/orderController.js | 89 +++++++++++++++++---------
+ backend/middleware/rateLimiter.js      | 16 +++--
+ backend/package-lock.json              | 78 ++++++++++++++++++++--
+ backend/package.json                   |  5 +-
+ backend/server.js                      | 26 +++++++-
+ 5 files changed, 173 insertions(+), 41 deletions(-)
+
+diff --git a/backend/controllers/orderController.js b/backend/controllers/orderController.js
+index 5f873d8..aef5286 100644
+--- a/backend/controllers/orderController.js
++++ b/backend/controllers/orderController.js
+@@ -1,43 +1,72 @@
+ const Order = require('../models/Order')
+ const Cart = require('../models/Cart')
+ const Product = require('../models/Product')
++const validator = require('validator')
+ 
+ // Place order: POST /api/orders
+-exports.placeOrder = async(req, res, next) => {
+-    try {
+-        const userId = req.user.id;
+-        const { shippingAddress, paymentMethod } = req.body;
+-
+-        if(!shippingAddress || !paymentMethod) {
+-            return res.status(400).json({ message: 'Cart is empty' })
+-        }
++exports.placeOrder = async (req, res, next) => {
++  try {
++    const userId = req.user.id;
++    const { shippingAddress, paymentMethod } = req.body;
+ 
+-        const totalAmount = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
++    if (!shippingAddress || !shippingAddress.address || !shippingAddress.postalCode) {
++      return res.status(400).json({ message: 'Shipping address is required and must be complete' });
++    }
++    if (!validator.isLength(shippingAddress.address, { min: 5 })) {
++      return res.status(400).json({ message: 'Invalid address' });
++    }
++    if (!validator.isPostalCode(shippingAddress.postalCode, 'any')) {
++      return res.status(400).json({ message: 'Invalid postal code' });
++    }
+ 
+-        // create order with snapshot of cart items
+-        const order = await Order.create({
+-            user: userId,
+-            items: cart.items.map(item => ({
+-                productId: item.productId,
+-                name: item.name,
+-                image: item.image,
+-                price: item.price,
+-                quantity: item.quantity,
+-            })),
+-            shippingAddress,
+-            paymentMethod,
+-            totalAmount,
+-        });
++    const cart = await Cart.findOne({ userId });
++    if (!cart || cart.items.length === 0) {
++      return res.status(400).json({ message: 'Cart is empty' });
++    }
+ 
+-        // clear cart
+-        cart.items = [];
+-        await cart.save();
++    // Validate products and stock
++    for (const item of cart.items) {
++      const product = await Product.findById(item.productId);
++      if (!product) {
++        return res.status(404).json({ message: `Product not found: ${item.name}` });
++      }
++      if (product.stock < item.quantity) {
++        return res.status(400).json({ message: `Insufficient stock for ${product.name}. Available: ${product.stock}` });
++      }
++    }
+ 
+-        res.status(201).json({ success: true, order })
+-    } catch(err) {
+-        next(err)
++    // Reduce stock
++    for (const item of cart.items) {
++      await Product.findByIdAndUpdate(item.productId, {
++        $inc: { stock: -item.quantity },
++      });
+     }
+-}
++
++    const totalAmount = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
++
++    const order = await Order.create({
++      user: userId,
++      items: cart.items.map(item => ({
++        productId: item.productId,
++        name: item.name,
++        image: item.image,
++        price: item.price,
++        quantity: item.quantity,
++      })),
++      shippingAddress,
++      paymentMethod,
++      totalAmount,
++      paymentStatus: 'pending',
++    });
++
++    cart.items = [];
++    await cart.save();
++
++    res.status(201).json({ success: true, order });
++  } catch (err) {
++    next(err);
++  }
++};
+ 
+ // GET /api/orders/my
+ exports.getMyOrders = async(req, res, next) => {
+diff --git a/backend/middleware/rateLimiter.js b/backend/middleware/rateLimiter.js
+index 7e97356..c22f2f5 100644
+--- a/backend/middleware/rateLimiter.js
++++ b/backend/middleware/rateLimiter.js
+@@ -1,11 +1,17 @@
+ const rateLimit = require('express-rate-limit')
+ 
+-const loginLimiter = rateLimit({
+-    windowsMs: 60 * 1000,
++exports.apiLimiter = rateLimit({
++    windowsMs: 15 * 60 * 1000,
++    max: 100, // Each IP to have 100 requests per window    
++    message: 'Too many requests from this IP, please try again after 15 minutes',
++    standardHeaders: true,
++    legacyHeaders: false
++})
++
++exports.loginLimiter = rateLimit({
++    windowsMs: 10* 60 * 1000,
+     max: 5,  // max 5 login requests per window
+     message: 'Too many login attempts. Please try again later',
+     standardHeaders: true,
+     legacyHeaders: false
+-});
+-
+-module.exports = loginLimiter
+\ No newline at end of file
++});
+\ No newline at end of file
+diff --git a/backend/package-lock.json b/backend/package-lock.json
+index 3c96f0a..17ffc2a 100644
+--- a/backend/package-lock.json
++++ b/backend/package-lock.json
+@@ -14,12 +14,15 @@
+         "cors": "^2.8.5",
+         "dotenv": "^17.2.0",
+         "express": "^5.1.0",
++        "express-mongo-sanitize": "^2.2.0",
+         "express-rate-limit": "^7.5.1",
+         "express-validator": "^7.2.1",
+         "helmet": "^8.1.0",
++        "hpp": "^0.2.3",
+         "jsonwebtoken": "^9.0.2",
+         "mongoose": "^8.16.3",
+-        "morgan": "^1.10.0"
++        "morgan": "^1.10.0",
++        "validator": "^13.15.15"
+       },
+       "devDependencies": {
+         "nodemon": "^3.1.10"
+@@ -446,6 +449,14 @@
+         "url": "https://opencollective.com/express"
+       }
+     },
++    "node_modules/express-mongo-sanitize": {
++      "version": "2.2.0",
++      "resolved": "https://registry.npmjs.org/express-mongo-sanitize/-/express-mongo-sanitize-2.2.0.tgz",
++      "integrity": "sha512-PZBs5nwhD6ek9ZuP+W2xmpvcrHwXZxD5GdieX2dsjPbAbH4azOkrHbycBud2QRU+YQF1CT+pki/lZGedHgo/dQ==",
++      "engines": {
++        "node": ">=10"
++      }
++    },
+     "node_modules/express-rate-limit": {
+       "version": "7.5.1",
+       "resolved": "https://registry.npmjs.org/express-rate-limit/-/express-rate-limit-7.5.1.tgz",
+@@ -472,6 +483,14 @@
+         "node": ">= 8.0.0"
+       }
+     },
++    "node_modules/express-validator/node_modules/validator": {
++      "version": "13.12.0",
++      "resolved": "https://registry.npmjs.org/validator/-/validator-13.12.0.tgz",
++      "integrity": "sha512-c1Q0mCiPlgdTVVVIJIrBuxNicYE+t/7oKeI9MWLj3fh/uq2Pxh/3eeWbVZ4OcGW1TUf53At0njHw5SMdA3tmMg==",
++      "engines": {
++        "node": ">= 0.10"
++      }
++    },
+     "node_modules/fill-range": {
+       "version": "7.1.1",
+       "resolved": "https://registry.npmjs.org/fill-range/-/fill-range-7.1.1.tgz",
+@@ -635,6 +654,57 @@
+         "node": ">=18.0.0"
+       }
+     },
++    "node_modules/hpp": {
++      "version": "0.2.3",
++      "resolved": "https://registry.npmjs.org/hpp/-/hpp-0.2.3.tgz",
++      "integrity": "sha512-4zDZypjQcxK/8pfFNR7jaON7zEUpXZxz4viyFmqjb3kWNWAHsLEUmWXcdn25c5l76ISvnD6hbOGO97cXUI3Ryw==",
++      "dependencies": {
++        "lodash": "^4.17.12",
++        "type-is": "^1.6.12"
++      },
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
++    "node_modules/hpp/node_modules/media-typer": {
++      "version": "0.3.0",
++      "resolved": "https://registry.npmjs.org/media-typer/-/media-typer-0.3.0.tgz",
++      "integrity": "sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==",
++      "engines": {
++        "node": ">= 0.6"
++      }
++    },
++    "node_modules/hpp/node_modules/mime-db": {
++      "version": "1.52.0",
++      "resolved": "https://registry.npmjs.org/mime-db/-/mime-db-1.52.0.tgz",
++      "integrity": "sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==",
++      "engines": {
++        "node": ">= 0.6"
++      }
++    },
++    "node_modules/hpp/node_modules/mime-types": {
++      "version": "2.1.35",
++      "resolved": "https://registry.npmjs.org/mime-types/-/mime-types-2.1.35.tgz",
++      "integrity": "sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==",
++      "dependencies": {
++        "mime-db": "1.52.0"
++      },
++      "engines": {
++        "node": ">= 0.6"
++      }
++    },
++    "node_modules/hpp/node_modules/type-is": {
++      "version": "1.6.18",
++      "resolved": "https://registry.npmjs.org/type-is/-/type-is-1.6.18.tgz",
++      "integrity": "sha512-TkRKr9sUTxEH8MdfuCSP7VizJyzRNMjj2J2do2Jr3Kym598JVdEksuzPQCnlFPW4ky9Q+iA+ma9BGm06XQBy8g==",
++      "dependencies": {
++        "media-typer": "0.3.0",
++        "mime-types": "~2.1.24"
++      },
++      "engines": {
++        "node": ">= 0.6"
++      }
++    },
+     "node_modules/http-errors": {
+       "version": "2.0.0",
+       "resolved": "https://registry.npmjs.org/http-errors/-/http-errors-2.0.0.tgz",
+@@ -1488,9 +1558,9 @@
+       }
+     },
+     "node_modules/validator": {
+-      "version": "13.12.0",
+-      "resolved": "https://registry.npmjs.org/validator/-/validator-13.12.0.tgz",
+-      "integrity": "sha512-c1Q0mCiPlgdTVVVIJIrBuxNicYE+t/7oKeI9MWLj3fh/uq2Pxh/3eeWbVZ4OcGW1TUf53At0njHw5SMdA3tmMg==",
++      "version": "13.15.15",
++      "resolved": "https://registry.npmjs.org/validator/-/validator-13.15.15.tgz",
++      "integrity": "sha512-BgWVbCI72aIQy937xbawcs+hrVaN/CZ2UwutgaJ36hGqRrLNM+f5LUT/YPRbo8IV/ASeFzXszezV+y2+rq3l8A==",
+       "engines": {
+         "node": ">= 0.10"
+       }
+diff --git a/backend/package.json b/backend/package.json
+index 4073905..cdc65ec 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -25,11 +25,14 @@
+     "cors": "^2.8.5",
+     "dotenv": "^17.2.0",
+     "express": "^5.1.0",
++    "express-mongo-sanitize": "^2.2.0",
+     "express-rate-limit": "^7.5.1",
+     "express-validator": "^7.2.1",
+     "helmet": "^8.1.0",
++    "hpp": "^0.2.3",
+     "jsonwebtoken": "^9.0.2",
+     "mongoose": "^8.16.3",
+-    "morgan": "^1.10.0"
++    "morgan": "^1.10.0",
++    "validator": "^13.15.15"
+   }
+ }
+diff --git a/backend/server.js b/backend/server.js
+index b7f7b3b..b09ddbc 100644
+--- a/backend/server.js
++++ b/backend/server.js
+@@ -6,17 +6,41 @@ const dotenv = require('dotenv');
+ const cookieParser = require('cookie-parser');
+ const errorHandler = require('./middleware/errorHandler')
+ const morgan = require('morgan')
++const mongoSanitize = require('express-mongo-sanitize')
++const hpp = require('hpp');
++const { apiLimiter } = require('./middleware/rateLimiter');
++const cors = require('cors'); 
++
++const allowedOrigins = [
++    // 'https://not-yet.vercel.app', 
++    'http://localhost:3000'
++]; 
+ 
+ dotenv.config()
+ 
+ const app = expres()
+ 
++app.use(cors({ 
++    origin: (origin, callback) => { 
++        if (!origin || allowedOrigins.includes(origin)) { 
++            callback(null, true); 
++        } else { 
++            callback(new Error('Not allowed by CORS')); 
++        } 
++    }, 
++    credentials: true, 
++}));
++
+ // Middleware
+ app.use(expres.json())
+ app.use(cookieParser())
+ app.use(cors({ origin: true, credentials: true }))
+-app.use(helmet())
++app.use(helmet()) // secure headers
+ app.use(morgan('dev'))
++app.use(mongoSanitize()) // prevent NoSQL injection
++app.use(hpp()) // prevent HTTP Parameter Pollution
++
++app.use('/api', apiLimiter)
+ 
+ // MongoDB connection
+ mongoose.connect(process.env.MONGODB_URI)

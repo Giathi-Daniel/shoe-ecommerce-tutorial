@@ -6,17 +6,41 @@ const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const errorHandler = require('./middleware/errorHandler')
 const morgan = require('morgan')
+const mongoSanitize = require('express-mongo-sanitize')
+const hpp = require('hpp');
+const { apiLimiter } = require('./middleware/rateLimiter');
+const cors = require('cors'); 
+
+const allowedOrigins = [
+    // 'https://not-yet.vercel.app', 
+    'http://localhost:3000'
+]; 
 
 dotenv.config()
 
 const app = expres()
 
+app.use(cors({ 
+    origin: (origin, callback) => { 
+        if (!origin || allowedOrigins.includes(origin)) { 
+            callback(null, true); 
+        } else { 
+            callback(new Error('Not allowed by CORS')); 
+        } 
+    }, 
+    credentials: true, 
+}));
+
 // Middleware
 app.use(expres.json())
 app.use(cookieParser())
 app.use(cors({ origin: true, credentials: true }))
-app.use(helmet())
+app.use(helmet()) // secure headers
 app.use(morgan('dev'))
+app.use(mongoSanitize()) // prevent NoSQL injection
+app.use(hpp()) // prevent HTTP Parameter Pollution
+
+app.use('/api', apiLimiter)
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
