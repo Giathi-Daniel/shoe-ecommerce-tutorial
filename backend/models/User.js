@@ -33,11 +33,21 @@ const userSchema = new mongoose.Schema(
             enum: ['user', 'admin'],
             default: 'user'
         },
+        loginAttempts: { 
+            type: Number,
+            default: 0,
+        },
+        lockUntil: { type: Date },
     },
     {
         timestamps: true,
     }
 );
+
+// check if user is locked
+userSchema.virtual('isLocked').get(function () {
+    return !!(this.lockUntil && this.lockUntil > Date.now())
+})
 
 // hash password before saving
 userSchema.pre('save', async function (next) {
