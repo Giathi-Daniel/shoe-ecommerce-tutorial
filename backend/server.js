@@ -1,4 +1,4 @@
-const expres = require('express');
+const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const mongoose = require('mongoose');
@@ -9,7 +9,7 @@ const morgan = require('morgan')
 const mongoSanitize = require('express-mongo-sanitize')
 const hpp = require('hpp');
 const { apiLimiter } = require('./middleware/rateLimiter');
-const cors = require('cors');
+const csrfVerify = require('./middleware/csrfProtection')
 
 const allowedOrigins = [
     // 'https://not-yet.vercel.app',
@@ -18,7 +18,7 @@ const allowedOrigins = [
 
 dotenv.config()
 
-const app = expres()
+const app = express()
 
 app.use(cors({
     origin: (origin, callback) => {
@@ -32,13 +32,38 @@ app.use(cors({
 }));
 
 // Middleware
-app.use(expres.json())
+app.use(express.json())
 app.use(cookieParser())
-app.use(cors({ origin: true, credentials: true }))
-app.use(helmet()) // secure headers
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+}));
+
+// set CSRF token
+app.use((req, res, next) => {
+  if (!req.cookies.csrfToken) {
+    const token = crypto.randomBytes(24).toString('hex');
+    res.cookie('csrfToken', token, {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+  }
+  next();
+});
+
+app.use(csrfVerify)
+
+app.use(helmet())
 app.use(morgan('dev'))
-app.use(mongoSanitize()) // prevent NoSQL injection
-app.use(hpp()) // prevent HTTP Parameter Pollution
+app.use(mongoSanitize()) 
+app.use(hpp()) 
 
 app.use('/api', apiLimiter)
 
