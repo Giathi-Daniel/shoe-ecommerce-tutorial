@@ -25,16 +25,16 @@ exports.login = async (req, res, next) => {
         const { email, password } = req.body;
         const user = await User.findOne({ email }).select('+password')
 
-        if(!user) {
-            return res.status(401).json({ message: 'Invalid credentials' })
-        }
-
         // check lock status
         if(user.isLocked) {
             const waitMinutes = Math.ceil((user.lockUntil - Date.now()) / 60000)
             return res.status(423).json({
                 message: `Account locked due to multiple failed attempts. Try again in ${waitMinutes} minutes(s).`
             })
+        }
+
+        if(!user) {
+            return res.status(401).json({ message: 'Invalid credentials' })
         }
 
         const isMatch = await user.matchPassword(password);
@@ -62,7 +62,7 @@ exports.unlockUser = async (req, res, next) => {
         const { userId } = req.params
         const user = await User.findById(userId)
 
-        if(!user) return res.status(404),json({ message: 'User not found' })
+        if(!user) return res.status(404).json({ message: 'User not found' })
 
         user.loginAttempts = 0
         user.lockUntil = undefined;
