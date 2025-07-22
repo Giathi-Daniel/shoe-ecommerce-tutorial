@@ -1,0 +1,125 @@
+From d20f731763e222c8ef877302873b2840bcf73db9 Mon Sep 17 00:00:00 2001
+From: Daniel Giathi <giathidaniel252@gmail.com>
+Date: Wed, 23 Jul 2025 01:02:39 +0300
+Subject: [PATCH 1/2] Implement strict Content Security Policy and enhanced
+ Helmet security headers
+
+---
+ backend/server.js | 36 +++++++++++++++++++++++++++++++++++-
+ 1 file changed, 35 insertions(+), 1 deletion(-)
+
+diff --git a/backend/server.js b/backend/server.js
+index 40d3e85..7c44171 100644
+--- a/backend/server.js
++++ b/backend/server.js
+@@ -61,7 +61,35 @@ app.use((req, res, next) => {
+ 
+ app.use(csrfVerify)
+ 
++app.use(helmet({
++    contentSecurityPolicy: {
++        useDefaults: true,
++        directives: {
++        "default-src": ["'self'"],
++        "script-src": [
++          "'self'",
++          "'unsafe-inline'",
++          "https://js.stripe.com", // allow Stripe scripts
++        ],
++        "style-src": [
++          "'self'",
++          "'unsafe-inline'",
++          "https://fonts.googleapis.com",
++        ],
++        "img-src": ["'self'", "data:", "https://your-image-cdn.com"],
++        "font-src": ["'self'", "https://fonts.gstatic.com"],
++        "frame-src": ["'self'", "https://js.stripe.com"],
++        "connect-src": ["'self'", "https://api.stripe.com"],
++      },
++    },
++    crossOriginEmbedderPolicy: false
++}))
++app.use(helmet.crossOriginResourcePolicy({ policy: "same-site" }));
++app.use(helmet.referrerPolicy({ policy: "no-referrer" }));
++app.use(helmet.dnsPrefetchControl({ allow: false }));
++app.use(helmet.frameguard({ action: 'deny' }));
++app.use(helmet.noSniff());
++app.use(helmet.ieNoOpen());
+ 
+ if (process.env.NODE_ENV === 'development') {
+     app.use(
+@@ -85,6 +113,12 @@ mongoose.connect(process.env.MONGODB_URI)
+ .then(() => console.log('MongoDB connected successfully'))
+ .catch((err) => console.error("MongoDB connection error", err))
+ 
++// route for csp reporting
++app.post('/csp-report', express.json({ type: ['json', 'application/csp-report'] }), (req, res) => {
++    console.error('CSP Violation:', req.body);
++    res.status(204).end()
++})
++
+ // Routes
+ app.use('/api/auth', require('./routes/authRoutes'))
+ app.use('/api/products', require('./routes/productRoutes'))
+
+From eb3e7ed4b61b2a6b38a2c8b8eb4293557c2f8822 Mon Sep 17 00:00:00 2001
+From: Daniel Giathi <giathidaniel252@gmail.com>
+Date: Wed, 23 Jul 2025 01:20:55 +0300
+Subject: [PATCH 2/2] remove raw file and aborted the patch process to
+ startover again
+
+---
+ backend/server.js.rej | 44 -------------------------------------------
+ 1 file changed, 44 deletions(-)
+ delete mode 100644 backend/server.js.rej
+
+diff --git a/backend/server.js.rej b/backend/server.js.rej
+deleted file mode 100644
+index 5e8ab92..0000000
+--- a/backend/server.js.rej
++++ /dev/null
+@@ -1,44 +0,0 @@
+-diff a/backend/server.js b/backend/server.js	(rejected hunks)
+-@@ -6,17 +6,41 @@ const dotenv = require('dotenv');
+- const cookieParser = require('cookie-parser');
+- const errorHandler = require('./middleware/errorHandler')
+- const morgan = require('morgan')
+-+const mongoSanitize = require('express-mongo-sanitize')
+-+const hpp = require('hpp');
+-+const { apiLimiter } = require('./middleware/rateLimiter');
+-+const cors = require('cors'); 
+-+
+-+const allowedOrigins = [
+-+    // 'https://not-yet.vercel.app', 
+-+    'http://localhost:3000'
+-+]; 
+- 
+- dotenv.config()
+- 
+- const app = expres()
+- 
+-+app.use(cors({ 
+-+    origin: (origin, callback) => { 
+-+        if (!origin || allowedOrigins.includes(origin)) { 
+-+            callback(null, true); 
+-+        } else { 
+-+            callback(new Error('Not allowed by CORS')); 
+-+        } 
+-+    }, 
+-+    credentials: true, 
+-+}));
+-+
+- // Middleware
+- app.use(expres.json())
+- app.use(cookieParser())
+- app.use(cors({ origin: true, credentials: true }))
+--app.use(helmet())
+-+app.use(helmet()) // secure headers
+- app.use(morgan('dev'))
+-+app.use(mongoSanitize()) // prevent NoSQL injection
+-+app.use(hpp()) // prevent HTTP Parameter Pollution
+-+
+-+app.use('/api', apiLimiter)
+- 
+- // MongoDB connection
+- mongoose.connect(process.env.MONGODB_URI)
