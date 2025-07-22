@@ -10,6 +10,7 @@ const mongoSanitize = require('express-mongo-sanitize')
 const hpp = require('hpp');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const csrfVerify = require('./middleware/csrfProtection')
+const logger = require('./utils/logger')
 
 const allowedOrigins = [
     // 'https://not-yet.vercel.app',
@@ -61,7 +62,19 @@ app.use((req, res, next) => {
 app.use(csrfVerify)
 
 app.use(helmet())
-app.use(morgan('dev'))
+
+if (process.env.NODE_ENV === 'development') {
+    app.use(
+        morgan('combined', {
+        stream: {
+            write: (message) => logger.info(message.trim()),
+        },
+        })
+    );
+} else {
+    app.use(morgan('tiny'));
+}
+
 app.use(mongoSanitize()) 
 app.use(hpp()) 
 

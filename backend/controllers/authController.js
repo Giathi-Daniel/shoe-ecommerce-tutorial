@@ -2,7 +2,8 @@ const User = require('../models/User')
 const generateToken = require('../utils/generateToken');
 const { handleFailedLogin, resetLoginAttempts } = require('../utils/loginAttempts');
 const crypto = require('crypto')
-const sendEmail = require('../utils/sendEmail')
+const sendEmail = require('../utils/sendEmail');
+const logger = require('../utils/logger');
 
 exports.register = async(req, res, next) => {
     try {
@@ -30,26 +31,31 @@ exports.login = async (req, res, next) => {
         // check lock status
         if(user.isLocked) {
             const waitMinutes = Math.ceil((user.lockUntil - Date.now()) / 60000)
+            logger.warn(`Login attempt for locked account: ${email}`);
             return res.status(423).json({
                 message: `Account locked due to multiple failed attempts. Try again in ${waitMinutes} minutes(s).`
             })
         }
 
         if(!user) {
+            logger.warn(`Login failed: user not found for email ${email}`)
             return res.status(401).json({ message: 'Invalid credentials' })
         }
 
         const isMatch = await user.matchPassword(password);
         if(!isMatch) {
+            logger.warn(`Invalid password for email: ${email}`);
             await handleFailedLogin(user);
             return res.status(401).json({ message: 'Invalid credentials' })
         }
 
+        logger.info(`User ${email} logged in successfully`)
         await resetLoginAttempts(user); //reset on success
         generateToken(res, user._id)
 
         res.status(200).json({ message: 'Login successful'})
     } catch(err) {
+        logger.error(`Login error: ${err.message}`)
         next(err)
     }
 };
@@ -107,9 +113,13 @@ exports.resetPassword = async(req, res, next) => {
             passwordResetExpires: { $gt: Date.now() },
         })
 
-        if(!user) return res.status(400).json({ message: 'Invalid or expired token' })
+        if(!user) {
+            logger.warn(`Invalid or expired reset token used: ${req.params.token}`);
+            return res.status(400).json({ message: 'Invalid or expired token' })
+        }
         
         if(req.body.password.length < 8) {
+            logger.warn(`Password reset failed for ${user.email}: password too short`);
             return res.status(400).json({ message: 'Password must be at least 8 characters' })
         }
 
@@ -119,8 +129,10 @@ exports.resetPassword = async(req, res, next) => {
 
         await user.save()
 
+        logger.info(`Password reset successfully for ${user.email}`);
         res.status(200).json({ message: 'Password reset successful' })
     } catch(err) {
+        logger.error(`Password reset error: ${err.message}`);
         next(err)
     }
 }
