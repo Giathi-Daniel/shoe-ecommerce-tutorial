@@ -108,6 +108,14 @@ app.use(hpp())
 
 app.use('/api', apiLimiter)
 
+// Raw body  for stripe webhook
+app/use('/api/payments/webhook', express.raw({ type: 'application/json' }))
+app.use(express.json())
+
+// Payment routes
+const paymentRoutes = require('./routes/paymentRoutes')
+app.use('/api/payments', paymentRoutes)
+
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
 .then(() => console.log('MongoDB connected successfully'))
