@@ -57,7 +57,12 @@ exports.createOrder = async (req, res, next) => {
     });
 
     const order = await paypalClient.execute(request);
-    res.status(200).json({ id: order.result.id });
+    res.status(200).json({
+        id: order.result.id,
+        status: order.result.status,             
+        links: order.result.links,               // PayPal approval URLs
+        amount: order.result.purchase_units[0].amount, 
+    });
 
   } catch (err) {
     console.error('PayPal Order Creation Error:', err);
