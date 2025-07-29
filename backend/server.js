@@ -11,6 +11,7 @@ const hpp = require('hpp');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const csrfVerify = require('./middleware/csrfProtection')
 const logger = require('./utils/logger')
+const paypalRoutes = require('./routes/paypalRoutes')
 
 const allowedOrigins = [
     // 'https://not-yet.vercel.app',
@@ -115,6 +116,8 @@ app.use(express.json())
 // Payment routes
 const paymentRoutes = require('./routes/paymentRoutes')
 app.use('/api/payments', paymentRoutes)
+
+app.use('/api/paypal', paypalRoutes)
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
