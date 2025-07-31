@@ -148,7 +148,6 @@ export default function Signup() {
                 error={errors.confirm}
             />
 
-          {/* Server error */}
           {serverError && (
             <p className="text-sm text-red-500">{serverError}</p>
           )}

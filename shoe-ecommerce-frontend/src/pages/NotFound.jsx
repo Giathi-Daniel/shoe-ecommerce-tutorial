@@ -20,7 +20,6 @@ export default function NotFound() {
 
     fetchQuote();
 
-    // Refresh quote every 20 seconds (optional)
     const interval = setInterval(fetchQuote, 20000);
 
     return () => clearInterval(interval);

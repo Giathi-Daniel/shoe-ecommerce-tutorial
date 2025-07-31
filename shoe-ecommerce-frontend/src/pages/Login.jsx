@@ -39,7 +39,6 @@ export default function Login() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Submit logic
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
@@ -114,7 +113,6 @@ export default function Login() {
             {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
           </div>
 
-          {/* Server-side Error */}
           {serverError && <p className="text-sm text-red-500">{serverError}</p>}
 
           {/* Submit Button */}
