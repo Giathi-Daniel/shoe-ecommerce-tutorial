@@ -20,8 +20,8 @@ This is a very simple but complete **eCommerce tutorial project** for learning f
 
 ## 🗂️ Folder Structure
 
-- `backend/`: Node.js app with APIs for auth, products, cart, and payment
-- `frontend/`: React + Tailwind app deployed on Vercel
+- `shoe-ecommerce-backend/`: Node.js app with APIs for auth, products, cart, and payment
+- `shoe-ecommerce-frontend/`: React + Tailwind app deployed on Vercel
 - `docs/`: Design diagrams and planning files
 
 ---
