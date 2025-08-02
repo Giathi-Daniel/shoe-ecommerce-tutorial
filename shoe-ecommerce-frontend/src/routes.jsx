@@ -1,21 +1,24 @@
-import Home from './pages/Home';
-import NotFound from './pages/NotFound'
+import { lazy, Suspense } from 'react';
+
+
+const Home = lazy(() => import('./pages/Home'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const Products = lazy(() => import('./pages/Products'));
+
 // import ProductDetails from './pages/ProductDetails';
 // import Cart from './pages/Cart';
 // import Checkout from './pages/Checkout';
-import Login from './pages/Login';
-import Signup from './pages/Signup.jsx';
-import ForgotPassword from './pages/ForgotPassword.jsx';
 
 const routes = [
-  { path: '/', element: <Home /> },
-  { path: '*', element: <NotFound /> },
-//   { path: '/product/:id', element: <ProductDetails /> },
-//   { path: '/cart', element: <Cart /> },
-//   { path: '/checkout', element: <Checkout /> },
-  { path: '/login', element: <Login /> },
-  { path: '/signup', element: <Signup /> },
-  { path: '/forgot-password', element: <ForgotPassword /> }
+  { path: '/', element: <Suspense fallback={<div>Loading...</div>}><Home /></Suspense> },
+  { path: '/products', element: <Suspense fallback={<div>Loading...</div>}><Products /></Suspense> },
+  { path: '/login', element: <Suspense fallback={<div>Loading...</div>}><Login /></Suspense> },
+  { path: '/signup', element: <Suspense fallback={<div>Loading...</div>}><Signup /></Suspense> },
+  { path: '/forgot-password', element: <Suspense fallback={<div>Loading...</div>}><ForgotPassword /></Suspense> },
+  { path: '*', element: <Suspense fallback={<div>Loading...</div>}><NotFound /></Suspense> },
 ];
 
 export default routes;
