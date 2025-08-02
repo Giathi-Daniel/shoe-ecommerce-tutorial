@@ -10,35 +10,54 @@ exports.createProduct = async(req, res, next) => {
     }
 };
 
-// GET /api/products?search=&category=&min=&max=
-exports.getProducts = async(req, res, next) => {
-    try {
-        const {search, category, min, max, page = 1, limit = 12 } = req.query
-        const query = {}
+// GET /api/products?search=&category=&min=&max=&sort=&page=&limit=
+exports.getProducts = async (req, res, next) => {
+  try {
+    const {
+      search,
+      category,
+      min,
+      max,
+      sort,
+      page = 1,
+      limit = 12,
+    } = req.query;
 
-        if(search) {
-            query.name = { $regex: search, $options: 'i'}
-        }
+    const query = {};
 
-        if(category) {
-            query.category = category
-        }
-
-        if(min || max) {
-            query.price = {}
-            if(min) query.price.$gte = Number(min)
-            if(max) query.price.$lte = Number(max)
-        }
-        
-        const products = await Product.find(query)
-        .skip((page - 1) * limit)
-        .limit(Number(limit))
-
-        res.status(200).json({ success: true, count: products.length, products })
-    } catch(err) {
-        next(err)
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
     }
-}
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (min || max) {
+      query.price = {};
+      if (min) query.price.$gte = Number(min);
+      if (max) query.price.$lte = Number(max);
+    }
+
+    const sortOptions = {
+      "price-asc": { price: 1 },
+      "price-desc": { price: -1 },
+    };
+    const sortBy = sortOptions[sort] || {};
+
+    const products = await Product.find(query)
+      .sort(sortBy)
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    res
+      .status(200)
+      .json({ success: true, count: products.length, products });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 // GET /api/products/:id
 exports.getSingleProduct = async (req, res, next) => {
