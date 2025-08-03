@@ -25,7 +25,9 @@ export default function useProducts({ limit = 0, search = '', categoryFilter = '
         params.append('limit', limit);
       }
 
-      const res = await fetch(`/api/products?${params.toString()}`, {
+      const apiUrl = 'https://shoe-ecommerce-tutorial.onrender.com'
+
+      const res = await fetch(`${apiUrl}?${params.toString()}`, {
         method: 'GET',
         credentials: 'include',
         headers: {

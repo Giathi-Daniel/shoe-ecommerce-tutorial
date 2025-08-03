@@ -15,9 +15,9 @@ const logger = require('./utils/logger')
 const paypalRoutes = require('./routes/paypalRoutes')
 
 const allowedOrigins = [
-    // 'https://not-yet.vercel.app',
     'http://localhost:3000',
-    'http://localhost:5173'
+    'http://localhost:5173',
+    'https://shoe-ecommerce-tutorial.vercel.app' 
 ];
 
 dotenv.config()
@@ -32,7 +32,7 @@ app.use(cors({
             callback(new Error('Not allowed by CORS'));
         }
     },
-    credentials: true,
+    credentials: true, 
 }));
 
 // Middleware
