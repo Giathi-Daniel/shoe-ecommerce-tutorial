@@ -1,10 +1,12 @@
-const paypal = require('@paypal/paypal-server-sdk')
+const paypal = require('@paypal/checkout-server-sdk');
 
-const paypalClient = new paypal.core.PayPalHttpClient(
-    new paypal.core.SandboxEnvironment(
-        process.env.PAYPAL_CLIENT_ID,
-        process.env.PAYPAL_CLIENT_SECRET
-    )
-)
+// Create environment with client ID and client secret
+const environment = new paypal.core.SandboxEnvironment(
+  process.env.PAYPAL_CLIENT_ID,
+  process.env.PAYPAL_CLIENT_SECRET
+);
 
-module.exports = paypalClient
+// Create PayPal HTTP client
+const paypalClient = new paypal.core.PayPalHttpClient(environment);
+
+module.exports = paypalClient;

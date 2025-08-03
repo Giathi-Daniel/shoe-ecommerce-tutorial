@@ -4,9 +4,10 @@ const helmet = require('helmet');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
+const crypto = require('crypto'); 
 const errorHandler = require('./middleware/errorHandler')
 const morgan = require('morgan')
-const mongoSanitize = require('express-mongo-sanitize')
+// const mongoSanitize = require('express-mongo-sanitize')
 const hpp = require('hpp');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const csrfVerify = require('./middleware/csrfProtection')
@@ -15,7 +16,8 @@ const paypalRoutes = require('./routes/paypalRoutes')
 
 const allowedOrigins = [
     // 'https://not-yet.vercel.app',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'http://localhost:5173'
 ];
 
 dotenv.config()
@@ -34,19 +36,7 @@ app.use(cors({
 }));
 
 // Middleware
-app.use(express.json())
 app.use(cookieParser())
-
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-}));
 
 // set CSRF token
 app.use((req, res, next) => {
@@ -104,14 +94,15 @@ if (process.env.NODE_ENV === 'development') {
     app.use(morgan('tiny'));
 }
 
-app.use(mongoSanitize()) 
+// Raw body  for stripe webhook
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }))
+// app.use(mongoSanitize({
+//     replaceWith: '_'
+// })) 
+app.use(express.json())
 app.use(hpp()) 
 
 app.use('/api', apiLimiter)
-
-// Raw body  for stripe webhook
-app/use('/api/payments/webhook', express.raw({ type: 'application/json' }))
-app.use(express.json())
 
 // Payment routes
 const paymentRoutes = require('./routes/paymentRoutes')

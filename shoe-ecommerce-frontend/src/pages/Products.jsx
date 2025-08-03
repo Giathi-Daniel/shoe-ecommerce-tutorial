@@ -1,72 +1,37 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import ProductCard from "../components/ProductCard";
-import useInfiniteScroll from "../hooks/useInfiniteScroll";
-import useDebounce from "../hooks/useDebounce";
+import useDebounce from "../hooks/useDebounce"; 
+import useProducts from "../hooks/useProducts";
+import ProductSlider from "../components/ProductSlider"; 
 
 export default function Products() {
-  const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]);
 
   const debouncedSearch = useDebounce(search, 300);
 
-  const fetchProducts = useCallback(async () => {
-    if (!hasMore) return;
+  const { products: fetchedProducts, loading, hasMore } = useProducts({
+    limit: 16, 
+    search: debouncedSearch,
+    categoryFilter,
+    sort,
+    page,
+  });
 
-    try {
-        setLoading(true);
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, categoryFilter, sort]);
 
-        const params = new URLSearchParams({
-        page,
-        search,
-        category: categoryFilter,
-        sort,
-        min: "0", 
-        max: "1000",
-        });
-
-        const res = await fetch(`/api/products?${params.toString()}`, {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        });
-
-        const data = await res.json();
-
-        if (!data || data.products.length === 0) {
-        setHasMore(false);
-        return;
-        }
-
-        setProducts((prev) => [...prev, ...data.products]);
-    } catch (err) {
-        console.error("Failed to fetch products", err);
-    } finally {
-        setLoading(false);
+  useEffect(() => {
+    if (page === 1) {
+      setProducts(fetchedProducts); 
+    } else {
+      setProducts((prev) => [...prev, ...fetchedProducts]);
     }
-  }, [page, hasMore, search, categoryFilter, sort]);
-
-
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    setProducts([])
-    setPage(1)
-    setHasMore(true)
-  }, [debouncedSearch, categoryFilter, sort])
-
-
-  const loadNextPage = () => setPage((prev) => prev + 1);
-  const lastElementRef = useInfiniteScroll(loadNextPage, hasMore, loading);
-
-  const filteredProducts = products;
+  }, [fetchedProducts, page]);
 
   return (
     <section className="px-4 py-10 mx-auto mt-10 max-w-7xl">
@@ -79,7 +44,6 @@ export default function Products() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-
         <select
           className="w-full p-2 border border-gray-300 rounded-lg md:w-1/4"
           value={sort}
@@ -89,7 +53,6 @@ export default function Products() {
           <option value="price-asc">Price: Low to High</option>
           <option value="price-desc">Price: High to Low</option>
         </select>
-
         <select
           className="w-full p-2 border border-gray-300 rounded-lg md:w-1/4"
           value={categoryFilter}
@@ -102,22 +65,19 @@ export default function Products() {
         </select>
       </div>
 
-      {/* Product Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
-        {filteredProducts.map((product, idx) => {
-          const isLast = idx === filteredProducts.length - 1;
-          return (
-            <div key={product._id} ref={isLast ? lastElementRef : null}>
-              <ProductCard product={product} />
-            </div>
-          );
-        })}
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {products.slice(0, 16).map((product, idx) => (
+          <div key={`${product._id}-${idx}`}>
+            <ProductCard product={product} />
+          </div>
+        ))}
       </div>
 
-      {loading && <p className="mt-4 text-center">Loading...</p>}
-      {!hasMore && !loading && (
-        <p className="mt-4 text-center text-gray-500">No more products.</p>
+      {products.length > 16 && (
+        <ProductSlider products={products} />
       )}
+
+      {loading && <p className="mt-4 text-center">Loading...</p>}
     </section>
   );
 }

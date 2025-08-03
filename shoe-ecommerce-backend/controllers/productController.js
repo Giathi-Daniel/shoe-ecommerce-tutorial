@@ -13,15 +13,21 @@ exports.createProduct = async(req, res, next) => {
 // GET /api/products?search=&category=&min=&max=&sort=&page=&limit=
 exports.getProducts = async (req, res, next) => {
   try {
-    const {
-      search,
-      category,
-      min,
-      max,
-      sort,
-      page = 1,
-      limit = 12,
+    let {
+      search = '',
+      category = '',
+      min = '',
+      max = '',
+      sort = '',
+      page = '1',
+      limit = '12',
     } = req.query;
+
+    // Convert to correct types
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 12;
+    const minNum = Number(min);
+    const maxNum = Number(max);
 
     const query = {};
 
@@ -33,10 +39,10 @@ exports.getProducts = async (req, res, next) => {
       query.category = category;
     }
 
-    if (min || max) {
+    if (!isNaN(minNum) || !isNaN(maxNum)) {
       query.price = {};
-      if (min) query.price.$gte = Number(min);
-      if (max) query.price.$lte = Number(max);
+      if (!isNaN(minNum)) query.price.$gte = minNum;
+      if (!isNaN(maxNum)) query.price.$lte = maxNum;
     }
 
     const sortOptions = {
@@ -47,12 +53,10 @@ exports.getProducts = async (req, res, next) => {
 
     const products = await Product.find(query)
       .sort(sortBy)
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum);
 
-    res
-      .status(200)
-      .json({ success: true, count: products.length, products });
+    res.status(200).json({ success: true, count: products.length, products });
   } catch (err) {
     next(err);
   }

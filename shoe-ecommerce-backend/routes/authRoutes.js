@@ -2,8 +2,9 @@ const express = require('express')
 const router = express.Router()
 const { register, login, logout, unlockUser, forgotPassword, resetPassword, changePassword } = require('../controllers/authController')
 const validateAuth = require('../middleware/validateInput')
-const loginLimiter = require('../middleware/rateLimiter')
+const { loginLimiter } = require('../middleware/rateLimiter')
 const adminOnly = require('../middleware/adminOnly')
+const protect = require('../middleware/protect')
 
 router.post('/register', validateAuth, register);
 router.post('/login', loginLimiter, validateAuth, login);
