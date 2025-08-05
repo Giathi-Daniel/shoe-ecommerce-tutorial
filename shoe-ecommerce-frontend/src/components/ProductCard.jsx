@@ -30,6 +30,17 @@ export default function ProductCard({ product }) {
           </span>
         )}
 
+        {product.rating > 0 && (
+          <div className="flex items-center mt-1 text-sm text-yellow-500">
+            {Array.from({ length: 5 }, (_, i) => (
+              <span key={i}>
+                {i < Math.floor(product.rating) ? '★' : '☆'}
+              </span>
+            ))}
+            <span className="ml-1 text-gray-500">({product.numReviews})</span>
+          </div>
+        )}
+
         <Link
           to={`/products/${product._id}`}
           className="block mt-3 text-sm text-primary hover:underline"

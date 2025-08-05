@@ -12,7 +12,7 @@ const hpp = require('hpp');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const csrfVerify = require('./middleware/csrfProtection')
 const logger = require('./utils/logger')
-const paypalRoutes = require('./routes/paypalRoutes')
+// const paypalRoutes = require('./routes/paypalRoutes')
 
 const allowedOrigins = [
     'http://localhost:3000',
@@ -95,7 +95,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Raw body  for stripe webhook
-app.use('/api/payments/webhook', express.raw({ type: 'application/json' }))
+// app.use('/api/payments/webhook', express.raw({ type: 'application/json' }))
 // app.use(mongoSanitize({
 //     replaceWith: '_'
 // })) 
@@ -105,10 +105,10 @@ app.use(hpp())
 app.use('/api', apiLimiter)
 
 // Payment routes
-const paymentRoutes = require('./routes/paymentRoutes')
-app.use('/api/payments', paymentRoutes)
+// const paymentRoutes = require('./routes/paymentRoutes')
+// app.use('/api/payments', paymentRoutes)
 
-app.use('/api/paypal', paypalRoutes)
+// app.use('/api/paypal', paypalRoutes)
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
