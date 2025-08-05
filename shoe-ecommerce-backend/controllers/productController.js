@@ -3,8 +3,15 @@ const Product = require('../models/Product')
 // POST /api/products
 exports.createProduct = async(req, res, next) => {
     try {
-        const newProduct = await Product.create(req.body)
-        res.status(201).json({ success: true, product: newProduct });
+      const { description } = req.body;
+
+      if (!req.body.shortDescription && description) {
+        const shortDesc = description.split('. ').slice(0, 2).join('. ') + '.';
+        req.body.shortDescription = shortDesc;
+      }
+
+      const newProduct = await Product.create(req.body)
+      res.status(201).json({ success: true, product: newProduct });
     } catch(err) {
         next(err)
     }
@@ -61,7 +68,6 @@ exports.getProducts = async (req, res, next) => {
     next(err);
   }
 };
-
 
 // GET /api/products/:id
 exports.getSingleProduct = async (req, res, next) => {
