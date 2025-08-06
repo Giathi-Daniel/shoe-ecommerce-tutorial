@@ -52,7 +52,7 @@ export default function ForgotPassword() {
 
         {submitted ? (
           <div className="text-center text-green-600">
-            ✅ Check your inbox for the password reset link.
+            Check your inbox for the password reset link.
           </div>
         ) : (
           <form className="space-y-5" onSubmit={handleSubmit} noValidate>
