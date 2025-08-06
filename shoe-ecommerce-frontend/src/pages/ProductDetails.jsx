@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 
 export default function ProductDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();  // <-- add this
+  const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);

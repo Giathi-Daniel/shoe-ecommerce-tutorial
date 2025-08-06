@@ -67,7 +67,6 @@ const ProductSlider = ({ products }) => {
     <div className="relative mt-10">
       <h2 className="mb-4 text-2xl font-semibold">More Products</h2>
 
-      {/* Buttons Container - Positioned just below the h2 */}
       <div className="flex justify-between w-full px-4 mb-4">
         <button
           onClick={() => sliderRef.current.slickPrev()} // Trigger previous slide on click

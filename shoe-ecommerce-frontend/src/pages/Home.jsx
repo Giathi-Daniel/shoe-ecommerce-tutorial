@@ -97,7 +97,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Promotions or Sale Banner */}
+      {/* Promotions Banner */}
       <section className="p-8 mt-16 text-center text-white bg-accent">
         <h2 className="mb-4 text-3xl font-bold">Summer Sale - Up to 50% Off!</h2>
         <p className="mb-6 text-xl">Hurry up, limited time offer!</p>
