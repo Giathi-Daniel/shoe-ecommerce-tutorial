@@ -9,16 +9,3 @@ module.exports = function csrfVerify(req, res, next) {
   }
   next();
 };
-
-const csrf = require('csurf');
-
-// // Use double submit cookie method
-// const csrfProtection = csrf({
-//   cookie: {
-//     httpOnly: true,
-//     secure: process.env.NODE_ENV === 'production',
-//     sameSite: 'strict',
-//   },
-// });
-
-// module.exports = csrfProtection;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
 
 export default function useProducts({ limit = 0, search = '', categoryFilter = '', sort = '', page = 1 }) {
   const [products, setProducts] = useState([]);
@@ -20,7 +21,6 @@ export default function useProducts({ limit = 0, search = '', categoryFilter = '
         max: "1000",
       });
 
-      // Adjusted fetch request
       if (limit > 0) {
         params.append('limit', limit);
       }
@@ -34,6 +34,11 @@ export default function useProducts({ limit = 0, search = '', categoryFilter = '
         },
       });
 
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Failed to fetch products');
+      }
+
       const data = await res.json();
 
       if (!data || data.products.length === 0) {
@@ -45,6 +50,7 @@ export default function useProducts({ limit = 0, search = '', categoryFilter = '
 
     } catch (err) {
       console.error("Failed to fetch products", err);
+      toast.error(err.message || 'Failed to fetch products');
     } finally {
       setLoading(false);
     }

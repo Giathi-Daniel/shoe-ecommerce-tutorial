@@ -4,6 +4,10 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import AuthFormInput from '../components/AuthFormInput';
 import AuthButton from '../components/AuthButton';
 
+import { toast } from 'react-toastify';
+
+import fetchWithCsrf from '../utils/fetchWithCsrf'; 
+
 const getPasswordStrength = (password) => {
   if (!password) return '';
   if (password.length < 6) return 'Weak';
@@ -20,18 +24,17 @@ export default function Signup() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value}));
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
 
     // clear error as user corrects input
-    setErrors((prev) => ({ ...prev, [name]: ''}))
-  }
-    
+    setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
   const validate = () => {
     const errs = {};
     if (!form.name) errs.name = 'Name is required';
@@ -47,14 +50,12 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setServerError('');
     if (!validate()) return;
 
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/auth/signup', {
+      const res = await fetchWithCsrf('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name,
           email: form.email,
@@ -62,14 +63,23 @@ export default function Signup() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to create account');
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(
+          data.message ||
+          (data.errors ? data.errors.map((e) => e.msg).join(', ') : 'Failed to create account')
+        );
+      }
+
+      toast.success('Account created successfully! You can now log in.');
       navigate('/login');
     } catch (err) {
-      setServerError(err.message);
+      toast.error(err.message || 'Something went wrong');
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen px-4 py-10 bg-gray-50">
@@ -99,58 +109,54 @@ export default function Signup() {
             error={errors.email}
           />
 
-            {/* Password with toggle and strength */}
+          {/* Password with toggle and strength */}
+          <div className="relative">
+            <label className="block mb-1 text-sm font-medium text-gray-700">Password</label>
             <div className="relative">
-                <label className="block mb-1 text-sm font-medium text-gray-700">Password</label>
-                <div className="relative">
-                    <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={form.password}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 ${
-                        errors.password
-                        ? 'border-red-500 focus:ring-red-300'
-                        : 'border-gray-300 focus:ring-primary'
-                    }`}
-                    />
-                    <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute text-gray-500 -translate-y-1/2 top-1/2 right-3"
-                    aria-label="Toggle password visibility"
-                    >
-                    {showPassword ? (
-                        <EyeSlashIcon className="w-5 h-5" />
-                    ) : (
-                        <EyeIcon className="w-5 h-5" />
-                    )}
-                    </button>
-                </div>
-                {form.password && (
-                    <p className="mt-1 text-sm text-gray-500">
-                    Strength:{' '}
-                    <span className="font-medium">
-                        {getPasswordStrength(form.password)}
-                    </span>
-                    </p>
-                )}
-                {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
-            </div>
-
-            {/* Confirm Password */}
-            <AuthFormInput
-                label="Confirm Password"
+              <input
                 type={showPassword ? 'text' : 'password'}
-                name="confirm"
-                value={form.confirm}
+                name="password"
+                value={form.password}
                 onChange={handleChange}
-                error={errors.confirm}
-            />
+                className={`w-full px-4 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 ${
+                  errors.password
+                    ? 'border-red-500 focus:ring-red-300'
+                    : 'border-gray-300 focus:ring-primary'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute text-gray-500 -translate-y-1/2 top-1/2 right-3"
+                aria-label="Toggle password visibility"
+              >
+                {showPassword ? (
+                  <EyeSlashIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+            {form.password && (
+              <p className="mt-1 text-sm text-gray-500">
+                Strength:{' '}
+                <span className="font-medium">{getPasswordStrength(form.password)}</span>
+              </p>
+            )}
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-500">{errors.password}</p>
+            )}
+          </div>
 
-          {serverError && (
-            <p className="text-sm text-red-500">{serverError}</p>
-          )}
+          {/* Confirm Password */}
+          <AuthFormInput
+            label="Confirm Password"
+            type={showPassword ? 'text' : 'password'}
+            name="confirm"
+            value={form.confirm}
+            onChange={handleChange}
+            error={errors.confirm}
+          />
 
           {/* Submit */}
           <AuthButton
