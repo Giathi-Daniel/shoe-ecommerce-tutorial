@@ -1,12 +1,18 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { toast } from 'react-toastify';
+
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+
+  const { addToCart } = useCart();
+  const { user } = useAuth();
 
   useEffect(() => {
     async function fetchProduct() {
@@ -18,7 +24,8 @@ export default function ProductDetails() {
         });
 
         if (!res.ok) {
-          setNotFound(true);
+          toast.error('Product not found.');
+          navigate(-1); // go back if product doesn't exist
           return;
         }
 
@@ -26,30 +33,46 @@ export default function ProductDetails() {
         if (data.success) {
           setProduct(data.product);
         } else {
-          setNotFound(true);
+          toast.error('Product not found.');
+          navigate(-1);
         }
       } catch (err) {
         console.error("Failed to fetch product", err);
-        setNotFound(true);
+        toast.error('Failed to fetch product. Please try again later.');
+        navigate(-1);
       } finally {
         setLoading(false);
       }
     }
 
     fetchProduct();
-  }, [id]);
+  }, [id, navigate]);
+
+  const handleAddToCart = (productId) => {
+    if (!user) {
+      toast.info('Please login to add products to your cart.');
+      navigate('/login'); 
+      return;
+    }
+
+    try {
+      addToCart(productId);
+      toast.success('Product added to cart!');
+    } catch (err) {
+      toast.error('Failed to add product to cart.');
+    }
+  };
 
   if (loading) {
     return <div className="p-8 text-center text-gray-500">Loading product...</div>;
   }
 
-  if (notFound || !product) {
+  if (!product) {
     return <div className="p-8 text-center text-red-600">Product not found.</div>;
   }
 
   return (
     <section className="max-w-5xl px-4 py-12 pt-24 mx-auto">
-      {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
         className="px-4 py-2 mb-6 font-semibold transition border rounded text-primary border-primary hover:bg-primary hover:text-white"
@@ -120,9 +143,8 @@ export default function ProductDetails() {
 
           <button
             className="px-6 py-3 mt-4 font-semibold text-white rounded-lg bg-primary hover:bg-opacity-90"
-            onClick={() => {
-              alert("Added to cart!");
-            }}
+            onClick={() => handleAddToCart(product._id)}
+            disabled={product.stock === 0}
           >
             Add to Cart
           </button>

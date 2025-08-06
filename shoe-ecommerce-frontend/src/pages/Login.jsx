@@ -3,37 +3,31 @@ import { Link, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import AuthFormInput from '../components/AuthFormInput';
 import AuthButton from '../components/AuthButton';
+import { toast } from 'react-toastify';
+import fetchWithCsrf from '../utils/fetchWithCsrf'; 
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverError, setServerError] = useState('');
   const navigate = useNavigate();
+  const { fetchProfile } = useAuth();
 
-  // Handle input changes with inline validation
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-
-    // Clear error when input becomes valid
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const validate = () => {
     const newErrors = {};
-    if (!form.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/^\S+@\S+\.\S+$/.test(form.email)) {
-      newErrors.email = 'Invalid email format';
-    }
+    if (!form.email) newErrors.email = 'Email is required';
+    else if (!/^\S+@\S+\.\S+$/.test(form.email)) newErrors.email = 'Invalid email format';
 
-    if (!form.password) {
-      newErrors.password = 'Password is required';
-    } else if (form.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
+    if (!form.password) newErrors.password = 'Password is required';
+    else if (form.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -41,27 +35,35 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setServerError('');
     if (!validate()) return;
 
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetchWithCsrf('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(form),
       });
 
-      if (!res.ok) throw new Error('Invalid email or password');
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Invalid email or password');
+      }
+
+      localStorage.setItem('token', data.token);
+
+      await fetchProfile();
+
+      toast.success('Logged in successfully!');
       navigate('/');
     } catch (err) {
-      setServerError(err.message || 'Login failed');
+      toast.error(err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen px-4 py-10 bg-gray-50">
@@ -112,8 +114,6 @@ export default function Login() {
             </div>
             {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
           </div>
-
-          {serverError && <p className="text-sm text-red-500">{serverError}</p>}
 
           {/* Submit Button */}
           <AuthButton

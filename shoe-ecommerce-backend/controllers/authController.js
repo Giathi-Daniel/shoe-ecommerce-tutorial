@@ -5,6 +5,10 @@ const crypto = require('crypto')
 const sendEmail = require('../utils/sendEmail');
 const logger = require('../utils/logger');
 
+const Cart = require('../models/Cart');
+const Order = require('../models/Order');
+
+
 exports.register = async(req, res, next) => {
     try {
         const { email, password, name } = req.body
@@ -157,3 +161,47 @@ exports.changePassword = async(req, res, next) => {
         next(err)
     }
 }
+
+exports.deleteAccount = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // Delete user
+    const deletedUser = await User.findByIdAndDelete(userId);
+    if (!deletedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Associated data cleanup
+    await Promise.all([
+      Cart.deleteOne({ user: userId }),
+      Wishlist.deleteOne({ user: userId }),
+      Order.deleteMany({ user: userId }) // keep if order history should persist
+    ]);
+
+    logger.info(`User ${userId} deleted their account and associated data.`);
+
+    res.clearCookie('token');
+    res.status(200).json({ message: 'Account and associated data deleted.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      createdAt: user.createdAt,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
