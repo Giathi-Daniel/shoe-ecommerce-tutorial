@@ -70,3 +70,6 @@ This project was built to help beginners learn:
 The Stripe & PayPal logic is for educational purposes only. It is **disabled in production** to avoid charges.
 
 ---
+
+
+You're free to contribute 
