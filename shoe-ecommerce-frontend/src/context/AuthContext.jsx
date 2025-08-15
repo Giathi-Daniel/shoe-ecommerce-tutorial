@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const AuthContext = createContext();
 
@@ -74,10 +75,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   const afterLogin = async (token) => {
-    localStorage.setItem('token', token);
-    await initCsrfToken();  // refresh CSRF token after auth
-    await fetchProfile();
+    try {
+      if (token) localStorage.setItem('token', token);
+      await initCsrfToken();
+      await fetchProfile();
+    } catch (error) {
+      console.error('Error during afterLogin:', error);
+      toast.error('Failed to initialize session')
+    }
   };
+
 
   return (
     <AuthContext.Provider value={{ user, setUser, logout, fetchProfile, afterLogin }}>

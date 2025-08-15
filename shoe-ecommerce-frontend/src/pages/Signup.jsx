@@ -76,7 +76,7 @@ export default function Signup() {
       }
 
       if (data.token) {
-        await afterLogin(data.token); // handles JWT, CSRF, and profile
+        await afterLogin(data.token);
         toast.success('Account created & logged in!');
         navigate('/');
       } else {
