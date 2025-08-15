@@ -4,7 +4,8 @@ const Product = require('../models/Product');
 // Save and populate cart
 const saveAndPopulateCart = async (cart) => {
     await cart.save();
-    return cart.populate('items.productId');
+    await cart.populate('items.productId'); // <--- added await here
+    return cart;
 };
 
 // Get or create cart for a user
@@ -18,7 +19,7 @@ const getOrCreateCart = async (userId) => {
 
 // Find item in cart
 const findCartItem = (cart, productId) => {
-    return cart.items.find(i => i.productId.toString() === productId);
+    return cart.items.find(i => i.productId.toString() === productId.toString()); // <--- normalize both sides
 };
 
 // Validate quantity input
