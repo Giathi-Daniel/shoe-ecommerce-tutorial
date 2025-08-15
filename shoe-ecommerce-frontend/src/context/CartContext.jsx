@@ -15,7 +15,11 @@ export function CartProvider({ children }) {
     const token = localStorage.getItem('token');
 
     useEffect(() => {
-        if (!token) return;
+        if (!token) {
+            setcartItems([]);
+            setLoading(false);
+            return;
+        }
         const fetchCart = async () => {
             try {
                 const res = await fetch('/api/cart', {
