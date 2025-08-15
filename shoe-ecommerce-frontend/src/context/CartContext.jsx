@@ -42,6 +42,19 @@ export function CartProvider({ children }) {
     }, [token]);
 
     const addToCart = async (productId, quantity = 1) => {
+        const existing = cartItems.find(item => item.product._id === productId);
+
+        // Optimistically update
+        const updatedCart = existing
+            ? cartItems.map(item =>
+                item.product._id === productId
+                    ? { ...item, quantity: item.quantity + quantity }
+                    : item
+            )
+            : [...cartItems, { product: { _id: productId }, quantity }];
+
+        setcartItems(updatedCart);
+
         try {
             const res = await fetchWithCsrf("/api/cart", {
                 method: "POST",
@@ -53,16 +66,17 @@ export function CartProvider({ children }) {
             });
 
             const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || "Failed to add item to cart");
-            }
+            if (!res.ok) throw new Error(data.message || "Failed to add item to cart");
+
             setcartItems(data.cartItems || []);
             toast.success("Item added to cart");
         } catch (err) {
-            console.error('Failed to add item to cart:', err);
             toast.error(err.message || "Failed to add item to cart");
+            // Rollback on error
+            setcartItems(cartItems);
         }
     };
+
 
     const removeFromCart = async (productId) => {
         try {
@@ -84,6 +98,12 @@ export function CartProvider({ children }) {
     };
 
     const updateQuantity = async (productId, quantity) => {
+        const prev = [...cartItems];
+        const updated = cartItems.map(item =>
+            item.product._id === productId ? { ...item, quantity } : item
+        );
+        setcartItems(updated);
+
         try {
             const res = await fetchWithCsrf(`/api/cart/${productId}`, {
                 method: 'PATCH',
@@ -94,16 +114,15 @@ export function CartProvider({ children }) {
                 body: JSON.stringify({ quantity })
             });
             const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || "Failed to update item quantity");
-            }
+            if (!res.ok) throw new Error(data.message || "Failed to update item quantity");
             setcartItems(data.cartItems || []);
             toast.success("Cart quantity updated");
         } catch (err) {
-            console.error('Failed to update item quantity:', err);
             toast.error(err.message || "Failed to update item quantity");
+            setcartItems(prev); // rollback
         }
     };
+
 
     const incrementItem = async (productId) => {
         try {
