@@ -55,10 +55,17 @@ app.use(cookieParser());
 
 // Expose CSRF token endpoint
 app.get('/api/csrf-token', (req, res) => {
-  const csrfToken = req.cookies.csrfToken;
+  let csrfToken = req.cookies.csrfToken;
+
   if (!csrfToken) {
-    return res.status(400).json({ message: 'CSRF token not found' });
+    csrfToken = crypto.randomBytes(32).toString('hex');
+    res.cookie('csrfToken', csrfToken, {
+      httpOnly: false, 
+      sameSite: 'Lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
   }
+
   res.json({ csrfToken });
 });
 
