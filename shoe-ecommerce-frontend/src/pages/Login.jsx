@@ -13,7 +13,7 @@ export default function Login() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { fetchProfile } = useAuth();
+  const { afterLogin } = useAuth(); 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,20 +51,17 @@ export default function Login() {
         throw new Error(data.message || 'Invalid email or password');
       }
 
-      localStorage.setItem('token', data.token);
-
-      await fetchProfile();
+      await afterLogin(data.token); // centralized logic: saves token, fetches profile, refreshes CSRF
 
       toast.success('Logged in successfully!');
       navigate('/');
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message || 'Something went wrong');
     } finally {
       setIsSubmitting(false);
     }
   };
-
-
+  
   return (
     <div className="flex items-center justify-center min-h-screen px-4 py-10 bg-gray-50">
       <div className="w-full max-w-md p-8 space-y-6 bg-white shadow-xl rounded-xl">
