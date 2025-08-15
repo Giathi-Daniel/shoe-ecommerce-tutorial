@@ -10,7 +10,6 @@ export default function Cart() {
     // Local state to hold editable quantities, keyed by productId
     const [localQuantities, setLocalQuantities] = useState({});
 
-    // Initialize localQuantities when cartItems change
     useEffect(() => {
         const quantities = {};
         cartItems.forEach(({ product, quantity }) => {
@@ -18,6 +17,7 @@ export default function Cart() {
         });
         setLocalQuantities(quantities);
     }, [cartItems]);
+
 
     // Debounce updateQuantity calls per product
     const timers = useRef({});
@@ -50,8 +50,16 @@ export default function Cart() {
 
         const parsed = parseInt(value, 10);
         if (isNaN(parsed) || parsed < 1) return;
+
         setLocalQuantities(prev => ({ ...prev, [productId]: parsed }));
+
+        // Update the quantity with debounce
+        clearTimeout(timers.current[productId]);
+        timers.current[productId] = setTimeout(() => {
+            updateQuantity(productId, parsed);
+        }, 500);
     };
+
 
 
     const total = cartItems.reduce(
