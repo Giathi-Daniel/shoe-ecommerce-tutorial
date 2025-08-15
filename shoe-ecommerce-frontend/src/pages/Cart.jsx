@@ -43,10 +43,16 @@ export default function Cart() {
 
 
     const handleInputChange = (productId, value) => {
+        if (value === "") {
+            setLocalQuantities(prev => ({ ...prev, [productId]: "" }));
+            return;
+        }
+
         const parsed = parseInt(value, 10);
-        if (isNaN(parsed) || parsed < 1) return; 
+        if (isNaN(parsed) || parsed < 1) return;
         setLocalQuantities(prev => ({ ...prev, [productId]: parsed }));
     };
+
 
     const total = cartItems.reduce(
         (acc, item) => acc + item.product.price * item.quantity, 0
