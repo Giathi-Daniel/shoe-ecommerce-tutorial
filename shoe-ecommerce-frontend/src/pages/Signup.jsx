@@ -7,6 +7,7 @@ import AuthButton from '../components/AuthButton';
 import { toast } from 'react-toastify';
 
 import fetchWithCsrf from '../utils/fetchWithCsrf'; 
+import { useAuth } from '../context/AuthContext';
 
 const getPasswordStrength = (password) => {
   if (!password) return '';
@@ -26,6 +27,7 @@ export default function Signup() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { afterLogin } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,6 +58,7 @@ export default function Signup() {
     try {
       const res = await fetchWithCsrf('/api/auth/register', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name,
           email: form.email,
@@ -63,16 +66,24 @@ export default function Signup() {
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(
           data.message ||
           (data.errors ? data.errors.map((e) => e.msg).join(', ') : 'Failed to create account')
         );
       }
 
-      toast.success('Account created successfully! You can now log in.');
-      navigate('/login');
+      if (data.token) {
+        await afterLogin(data.token);
+        toast.success('Account created & logged in!');
+        navigate('/');
+      } else {
+        toast.success('Account created successfully! You can now log in.');
+        navigate('/login');
+      }
+
     } catch (err) {
       toast.error(err.message || 'Something went wrong');
     } finally {

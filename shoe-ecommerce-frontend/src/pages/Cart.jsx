@@ -1,6 +1,8 @@
 import { useCart } from "../context/CartContext";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; 
+import { useRef } from "react";
+
 
 export default function Cart() {
     const { cartItems, removeFromCart, loading, incrementItem, decrementItem, updateQuantity } = useCart();
@@ -8,7 +10,6 @@ export default function Cart() {
     // Local state to hold editable quantities, keyed by productId
     const [localQuantities, setLocalQuantities] = useState({});
 
-    // Initialize localQuantities when cartItems change
     useEffect(() => {
         const quantities = {};
         cartItems.forEach(({ product, quantity }) => {
@@ -17,16 +18,17 @@ export default function Cart() {
         setLocalQuantities(quantities);
     }, [cartItems]);
 
+
     // Debounce updateQuantity calls per product
+    const timers = useRef({});
+
     useEffect(() => {
-        const timers = {};
-
         Object.entries(localQuantities).forEach(([productId, qty]) => {
-            // Clear previous timer for this productId if any
-            if (timers[productId]) clearTimeout(timers[productId]);
+            if (timers.current[productId]) {
+                clearTimeout(timers.current[productId]);
+            }
 
-            // Set new timer to call updateQuantity after 500ms of inactivity
-            timers[productId] = setTimeout(() => {
+            timers.current[productId] = setTimeout(() => {
                 const cartItem = cartItems.find(item => item.product._id === productId);
                 if (cartItem && qty !== cartItem.quantity && qty > 0) {
                     updateQuantity(productId, qty);
@@ -34,17 +36,31 @@ export default function Cart() {
             }, 500);
         });
 
-        // Cleanup function clears all timers on unmount or localQuantities change
         return () => {
-            Object.values(timers).forEach(clearTimeout);
+            Object.values(timers.current).forEach(clearTimeout);
         };
     }, [localQuantities, updateQuantity, cartItems]);
 
+
     const handleInputChange = (productId, value) => {
+        if (value === "") {
+            setLocalQuantities(prev => ({ ...prev, [productId]: "" }));
+            return;
+        }
+
         const parsed = parseInt(value, 10);
-        if (isNaN(parsed) || parsed < 1) return; 
+        if (isNaN(parsed) || parsed < 1) return;
+
         setLocalQuantities(prev => ({ ...prev, [productId]: parsed }));
+
+        // Update the quantity with debounce
+        clearTimeout(timers.current[productId]);
+        timers.current[productId] = setTimeout(() => {
+            updateQuantity(productId, parsed);
+        }, 500);
     };
+
+
 
     const total = cartItems.reduce(
         (acc, item) => acc + item.product.price * item.quantity, 0

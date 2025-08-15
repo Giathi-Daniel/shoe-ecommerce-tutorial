@@ -1,13 +1,12 @@
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 
-// Save and populate cart
 const saveAndPopulateCart = async (cart) => {
     await cart.save();
-    return cart.populate('items.productId');
+    await cart.populate('items.productId'); // await is crucial here
+    return cart;
 };
 
-// Get or create cart for a user
 const getOrCreateCart = async (userId) => {
     let cart = await Cart.findOne({ userId });
     if (!cart) {
@@ -16,17 +15,15 @@ const getOrCreateCart = async (userId) => {
     return cart;
 };
 
-// Find item in cart
 const findCartItem = (cart, productId) => {
-    return cart.items.find(i => i.productId.toString() === productId);
+    if (!productId) return undefined;
+    return cart.items.find(i => i.productId?.toString() === productId.toString());
 };
 
-// Validate quantity input
 const isValidQuantity = (quantity) => {
     return Number.isInteger(quantity) && quantity > 0;
 };
 
-// Check if product exists
 const ensureProductExists = async (productId) => {
     return await Product.findById(productId);
 };

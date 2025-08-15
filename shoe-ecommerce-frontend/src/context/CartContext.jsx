@@ -15,7 +15,11 @@ export function CartProvider({ children }) {
     const token = localStorage.getItem('token');
 
     useEffect(() => {
-        if (!token) return;
+        if (!token) {
+            setcartItems([]);
+            setLoading(false);
+            return;
+        }
         const fetchCart = async () => {
             try {
                 const res = await fetch('/api/cart', {
@@ -38,6 +42,19 @@ export function CartProvider({ children }) {
     }, [token]);
 
     const addToCart = async (productId, quantity = 1) => {
+        const existing = cartItems.find(item => item.product._id === productId);
+
+        // Optimistically update
+        const updatedCart = existing
+            ? cartItems.map(item =>
+                item.product._id === productId
+                    ? { ...item, quantity: item.quantity + quantity }
+                    : item
+            )
+            : [...cartItems, { product: { _id: productId }, quantity }];
+
+        setcartItems(updatedCart);
+
         try {
             const res = await fetchWithCsrf("/api/cart", {
                 method: "POST",
@@ -49,37 +66,45 @@ export function CartProvider({ children }) {
             });
 
             const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || "Failed to add item to cart");
-            }
+            if (!res.ok) throw new Error(data.message || "Failed to add item to cart");
+
             setcartItems(data.cartItems || []);
             toast.success("Item added to cart");
         } catch (err) {
-            console.error('Failed to add item to cart:', err);
             toast.error(err.message || "Failed to add item to cart");
+            // Rollback on error
+            setcartItems(cartItems);
         }
     };
 
+
     const removeFromCart = async (productId) => {
+        const prev = cartItems;
+        const updatedCart = cartItems.filter(item => item.product._id !== productId);
+        setcartItems(updatedCart);
+
         try {
             const res = await fetchWithCsrf(`/api/cart/${productId}`, {
-                method: 'DELETE',
+                method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` }
             });
-
-            const updatedCart = await res.json();
-            if (!res.ok) {
-                throw new Error(updatedCart.message || "Failed to remove item from cart");
-            }
-            setcartItems(updatedCart.cartItems || []);
-            toast.success("Item removed from cart");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Failed to remove item from cart");
+            setcartItems(data.cartItems || []);
         } catch (err) {
-            console.error('Failed to remove item from cart:', err);
+            setcartItems(prev);  // rollback state if error
             toast.error(err.message || "Failed to remove item from cart");
         }
     };
 
+
     const updateQuantity = async (productId, quantity) => {
+        const prev = [...cartItems];
+        const updated = cartItems.map(item =>
+            item.product._id === productId ? { ...item, quantity } : item
+        );
+        setcartItems(updated);
+
         try {
             const res = await fetchWithCsrf(`/api/cart/${productId}`, {
                 method: 'PATCH',
@@ -90,34 +115,39 @@ export function CartProvider({ children }) {
                 body: JSON.stringify({ quantity })
             });
             const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || "Failed to update item quantity");
-            }
+            if (!res.ok) throw new Error(data.message || "Failed to update item quantity");
             setcartItems(data.cartItems || []);
             toast.success("Cart quantity updated");
         } catch (err) {
-            console.error('Failed to update item quantity:', err);
             toast.error(err.message || "Failed to update item quantity");
+            setcartItems(prev); // rollback
         }
     };
 
+
     const incrementItem = async (productId) => {
+        const prev = cartItems;
+        const updatedCart = cartItems.map(item => 
+            item.product._id === productId
+                ? { ...item, quantity: item.quantity + 1 }
+                : item
+        );
+        setcartItems(updatedCart);
+
         try {
             const res = await fetchWithCsrf(`/api/cart/${productId}/increment`, {
-                method: 'PATCH',
+                method: "PATCH",
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || "Failed to increment item quantity");
-            }
+            if (!res.ok) throw new Error(data.message || "Failed to increment item quantity");
             setcartItems(data.cartItems || []);
-            toast.success("Item quantity incremented");
         } catch (err) {
-            console.error('Failed to increment item quantity:', err);
+            setcartItems(prev);  // rollback state if error
             toast.error(err.message || "Failed to increment item quantity");
         }
     };
+
 
     const decrementItem = async (productId) => {
         try {
