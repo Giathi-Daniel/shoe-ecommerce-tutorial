@@ -20,7 +20,13 @@ const routes = [
   { path: '/', element: <Suspense fallback={<div>Loading...</div>}><Home /></Suspense> },
   { path: '/products', element: <Suspense fallback={<div>Loading...</div>}><Products /></Suspense> },
   { path: '/products/:id', element: <Suspense fallback={<div>Loading...</div>}><ProductDetails /></Suspense> },
-  { path: '/cart', element: <Suspense fallback={<div>Loading...</div>}><Cart /></Suspense> },
+  { path: '/cart', 
+    element: (
+      <PrivateRoute>
+        <Suspense fallback={<div>Loading...</div>}><Cart /></Suspense> 
+      </PrivateRoute>
+    ),
+  },
   { path: '/login', element: <Suspense fallback={<div>Loading...</div>}><Login /></Suspense> },
   { path: '/signup', element: <Suspense fallback={<div>Loading...</div>}><Signup /></Suspense> },
   { path: '/forgot-password', element: <Suspense fallback={<div>Loading...</div>}><ForgotPassword /></Suspense> },
