@@ -75,15 +75,10 @@ export default function Signup() {
         );
       }
 
-      if (data.token) {
-        await afterLogin(data.token);
-        toast.success('Account created & logged in!');
-        navigate('/');
-      } else {
-        toast.success('Account created successfully! You can now log in.');
-        navigate('/login');
-      }
-
+      // Always assume cookie-based login
+      await afterLogin();
+      toast.success('Account created & logged in!');
+      navigate('/');
     } catch (err) {
       toast.error(err.message || 'Something went wrong');
     } finally {

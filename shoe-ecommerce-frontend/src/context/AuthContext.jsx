@@ -32,14 +32,10 @@ export function AuthProvider({ children }) {
 
   // --- Fetch the user profile ---
   const fetchProfile = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
       const res = await fetch('/api/auth/profile', {
         method: 'GET',
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: 'include',
+        credentials: 'include', 
       });
 
       if (res.status === 401 || res.status === 403) {
@@ -52,18 +48,28 @@ export function AuthProvider({ children }) {
       setUser(data);
     } catch (err) {
       console.error('Error fetching profile:', err);
-      logout(); // force logout on token failure
+      logout(); 
     }
   };
 
+
   // --- Logout function ---
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('csrfToken');
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+
+    localStorage.removeItem('csrfToken'); 
     setUser(null);
     navigate('/');
-    initCsrfToken(); // refresh CSRF after logout
+    initCsrfToken(); 
   };
+
 
   // --- On mount: check auth + initialize CSRF ---
   useEffect(() => {
@@ -74,9 +80,8 @@ export function AuthProvider({ children }) {
     init();
   }, []);
 
-  const afterLogin = async (token) => {
+  const afterLogin = async () => {
     try {
-      if (token) localStorage.setItem('token', token);
       await initCsrfToken();
       await fetchProfile();
     } catch (error) {
@@ -84,6 +89,7 @@ export function AuthProvider({ children }) {
       toast.error('Failed to initialize session')
     }
   };
+
 
 
   return (

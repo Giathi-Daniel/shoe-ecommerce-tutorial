@@ -9,7 +9,7 @@ const Cart = require('../models/Cart');
 const Order = require('../models/Order');
 
 
-exports.register = async(req, res, next) => {
+exports.register = async (req, res, next) => {
   try {
     const { email, password, name } = req.body;
 
@@ -20,17 +20,23 @@ exports.register = async(req, res, next) => {
 
     const newUser = await User.create({ email, password, name });
 
-    const token = generateToken(res, newUser._id);
+    // Sets JWT in cookie
+    generateToken(res, newUser._id);
 
+    // Return only a success message
     res.status(201).json({
-        message: 'User registered successfully',
-        token, // Return token for frontend
+      message: 'User registered successfully',
+      user: {
+        id: newUser._id,
+        email: newUser.email,
+        name: newUser.name,
+      },
     });
-
   } catch (err) {
     next(err);
   }
 };
+
 
 exports.login = async (req, res, next) => {
   try {

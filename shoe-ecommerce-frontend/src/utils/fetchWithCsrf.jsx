@@ -1,40 +1,46 @@
+let csrfToken = null;
+
 export default async function fetchWithCsrf(url, options = {}) {
+  async function getCsrfToken() {
+    const csrfRes = await fetch('/api/csrf-token', {
+      credentials: 'include',
+    });
+
+    if (!csrfRes.ok) throw new Error('Failed to fetch CSRF token');
+    const { csrfToken } = await csrfRes.json();
+    return csrfToken;
+  }
+
   try {
-    let csrfToken = localStorage.getItem('csrfToken');
-
-    // Only fetch a new token if one doesn't already exist
+    // fetch token if missing
     if (!csrfToken) {
-      const csrfRes = await fetch('/api/csrf-token', {
-        credentials: 'include', // receive the csrfToken cookie
-      });
-
-      const csrfData = await csrfRes.json();
-
-      if (!csrfRes.ok || !csrfData.csrfToken) {
-        throw new Error('Failed to retrieve CSRF token');
-      }
-
-      csrfToken = csrfData.csrfToken;
-      localStorage.setItem('csrfToken', csrfToken);
+      csrfToken = await getCsrfToken();
     }
-
-    // Merge headers (and allow overriding)
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': csrfToken,
-      ...(options.headers || {}),
-    };
 
     const response = await fetch(url, {
       ...options,
-      headers,
-      credentials: 'include', // include cookies 
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+        ...(options.headers || {}),
+      },
+      credentials: 'include',
     });
 
-    // If 403, assume CSRF failed — clear token and log for debugging
+    // If backend rejects CSRF → refresh & retry ONCE
     if (response.status === 403) {
-      console.warn('CSRF token rejected, clearing cached token.');
-      localStorage.removeItem('csrfToken');
+      console.warn('CSRF rejected, refreshing token...');
+      csrfToken = await getCsrfToken();
+
+      return fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          ...(options.headers || {}),
+        },
+        credentials: 'include',
+      });
     }
 
     return response;

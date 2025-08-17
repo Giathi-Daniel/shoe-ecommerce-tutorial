@@ -51,7 +51,7 @@ export default function Login() {
         throw new Error(data.message || 'Invalid email or password');
       }
 
-      await afterLogin(data.token); // centralized logic: saves token, fetches profile, refreshes CSRF
+      await afterLogin();
 
       toast.success('Logged in successfully!');
       navigate('/');
@@ -61,6 +61,7 @@ export default function Login() {
       setIsSubmitting(false);
     }
   };
+
   
   return (
     <div className="flex items-center justify-center min-h-screen px-4 py-10 bg-gray-50">
