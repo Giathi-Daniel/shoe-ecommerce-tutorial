@@ -2,7 +2,7 @@ let csrfToken = null;
 
 export default async function fetchWithCsrf(url, options = {}) {
   async function getCsrfToken() {
-    const csrfRes = await fetch('/api/csrf-token', {
+    const csrfRes = await fetch('http://localhost:3000/api/csrf-token', {
       credentials: 'include',
     });
 

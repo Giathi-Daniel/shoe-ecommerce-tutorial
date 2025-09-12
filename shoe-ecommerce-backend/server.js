@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
-
+const path = require('path')
 // ----------------------
 //  Security & Middleware
 // ----------------------
@@ -56,7 +56,7 @@ app.use(cookieParser());
 // Expose CSRF token endpoint
 app.get('/api/csrf-token', (req, res) => {
   let csrfToken = req.cookies.csrfToken;
-
+  
   if (!csrfToken) {
     csrfToken = crypto.randomBytes(32).toString('hex');
     res.cookie('csrfToken', csrfToken, {
@@ -65,7 +65,7 @@ app.get('/api/csrf-token', (req, res) => {
       secure: process.env.NODE_ENV === 'production',
     });
   }
-
+  
   res.json({ csrfToken });
 });
 

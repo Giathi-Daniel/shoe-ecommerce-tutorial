@@ -25,7 +25,7 @@ export default function useProducts({ limit = 0, search = '', categoryFilter = '
         params.append('limit', limit);
       }
 
-      const res = await fetch(`/api/products?${params.toString()}`, {
+      const res = await fetch(`http://localhost:3000/api/products?${params.toString()}`, {
         method: 'GET',
         credentials: 'include',
         headers: {
