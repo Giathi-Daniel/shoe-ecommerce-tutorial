@@ -12,7 +12,7 @@ function App() {
   useEffect(() => {
     const initCsrfToken = async () => {
       try {
-        const res = await fetch('/api/csrf-token', {
+        const res = await fetch('http://localhost:3000/api/csrf-token', {
           credentials: 'include', // make sure cookies are sent
         });
         const data = await res.json();

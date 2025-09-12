@@ -16,7 +16,7 @@ export function CartProvider({ children }) {
   useEffect(() => {
     const fetchCart = async () => {
       try {
-        const res = await fetchWithCsrf("/api/cart", {
+        const res = await fetchWithCsrf("http://localhost:3000/api/cart", {
           method: "GET",
           credentials: "include",
         });

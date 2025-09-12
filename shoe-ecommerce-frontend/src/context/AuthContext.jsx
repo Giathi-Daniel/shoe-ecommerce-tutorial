@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
   // --- Centralized CSRF token setup ---
   const initCsrfToken = async () => {
     try {
-      const res = await fetch('/api/csrf-token', {
+      const res = await fetch('http://localhost:3000/api/csrf-token', {
         credentials: 'include',
       });
       const data = await res.json();
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
   // --- Fetch the user profile ---
   const fetchProfile = async () => {
     try {
-      const res = await fetch('/api/auth/profile', {
+      const res = await fetch('http://localhost:3000/api/auth/profile', {
         method: 'GET',
         credentials: 'include', 
       });
@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
   // --- Logout function ---
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', {
+      await fetch('http://localhost:3000/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });
