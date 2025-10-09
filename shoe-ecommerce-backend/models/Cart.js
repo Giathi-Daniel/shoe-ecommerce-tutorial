@@ -29,7 +29,7 @@ const cartSchema = new mongoose.Schema(
     }
 );
 
-// 🔥 VIRTUAL: Calculate cart total dynamically
+// Calculate cart total dynamically
 cartSchema.virtual('total').get(function () {
     if (!Array.isArray(this.items)) return 0;
 
