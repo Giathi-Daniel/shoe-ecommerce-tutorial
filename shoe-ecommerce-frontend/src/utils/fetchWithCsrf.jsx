@@ -1,8 +1,10 @@
+const API_URL = import.meta.env.VITE_API_URL;
+
 let csrfToken = null;
 
 export default async function fetchWithCsrf(url, options = {}) {
   async function getCsrfToken() {
-    const csrfRes = await fetch('http://localhost:3000/api/csrf-token', {
+    const csrfRes = await fetch(`${API_URL}/api/csrf-token`, {
       credentials: 'include',
     });
 

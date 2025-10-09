@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import fetchWithCsrf from "../utils/fetchWithCsrf";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const CartContext = createContext();
 
 export function useCart() {
@@ -16,7 +18,7 @@ export function CartProvider({ children }) {
   useEffect(() => {
     const fetchCart = async () => {
       try {
-        const res = await fetchWithCsrf("http://localhost:3000/api/cart", {
+        const res = await fetchWithCsrf(`${API_URL}/api/cart`, {
           method: "GET",
           credentials: "include",
         });
@@ -39,7 +41,7 @@ export function CartProvider({ children }) {
   // --- Add to cart ---
   const addToCart = async (productId, quantity = 1) => {
     try {
-      const res = await fetchWithCsrf("/api/cart", {
+      const res = await fetchWithCsrf(`${API_URL}/api/cart`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -59,7 +61,7 @@ export function CartProvider({ children }) {
   // --- Remove from cart ---
   const removeFromCart = async (productId) => {
     try {
-      const res = await fetchWithCsrf(`/api/cart/${productId}`, {
+      const res = await fetchWithCsrf(`${API_URL}/api/cart/${productId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -76,7 +78,7 @@ export function CartProvider({ children }) {
   // --- Update quantity ---
   const updateQuantity = async (productId, quantity) => {
     try {
-      const res = await fetchWithCsrf(`/api/cart/${productId}`, {
+      const res = await fetchWithCsrf(`${API_URL}/api/cart/${productId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -95,7 +97,7 @@ export function CartProvider({ children }) {
   // --- Increment ---
   const incrementItem = async (productId) => {
     try {
-      const res = await fetchWithCsrf(`/api/cart/${productId}/increment`, {
+      const res = await fetchWithCsrf(`${API_URL}/api/cart/${productId}/increment`, {
         method: "PATCH",
         credentials: "include",
       });
@@ -112,7 +114,7 @@ export function CartProvider({ children }) {
   // --- Decrement ---
   const decrementItem = async (productId) => {
     try {
-      const res = await fetchWithCsrf(`/api/cart/${productId}/decrement`, {
+      const res = await fetchWithCsrf(`${API_URL}/api/cart/${productId}/decrement`, {
         method: "PATCH",
         credentials: "include",
       });

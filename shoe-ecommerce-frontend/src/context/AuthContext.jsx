@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 const AuthContext = createContext();
+const API_URL = import.meta.env.VITE_API_URL;
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -15,7 +16,7 @@ export function AuthProvider({ children }) {
   // --- Centralized CSRF token setup ---
   const initCsrfToken = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/csrf-token', {
+      const res = await fetch(`${API_URL}/api/csrf-token`, {
         credentials: 'include',
       });
       const data = await res.json();
@@ -33,7 +34,7 @@ export function AuthProvider({ children }) {
   // --- Fetch the user profile ---
   const fetchProfile = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/auth/profile', {
+      const res = await fetch(`${API_URL}/api/auth/profile`, {
         method: 'GET',
         credentials: 'include', 
       });
@@ -56,7 +57,7 @@ export function AuthProvider({ children }) {
   // --- Logout function ---
   const logout = async () => {
     try {
-      await fetch('http://localhost:3000/api/auth/logout', {
+      await fetch(`${API_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });

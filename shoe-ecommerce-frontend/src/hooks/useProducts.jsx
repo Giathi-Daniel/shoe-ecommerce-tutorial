@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function useProducts({ limit = 0, search = '', categoryFilter = '', sort = '', page = 1 }) {
   const [products, setProducts] = useState([]);
   const [hasMore, setHasMore] = useState(true);
@@ -9,7 +11,7 @@ export default function useProducts({ limit = 0, search = '', categoryFilter = '
   const fetchProducts = useCallback(async () => {
     if (!hasMore) return;
 
-    try {
+    try {    
       setLoading(true);
 
       const params = new URLSearchParams({
@@ -25,7 +27,7 @@ export default function useProducts({ limit = 0, search = '', categoryFilter = '
         params.append('limit', limit);
       }
 
-      const res = await fetch(`http://localhost:3000/api/products?${params.toString()}`, {
+      const res = await fetch(`${API_URL}/api/products?${params.toString()}`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -59,6 +61,11 @@ export default function useProducts({ limit = 0, search = '', categoryFilter = '
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    setProducts([]);
+    setHasMore(true);
+  }, [search, categoryFilter, sort]);
 
   return { products, loading, hasMore };
 }
