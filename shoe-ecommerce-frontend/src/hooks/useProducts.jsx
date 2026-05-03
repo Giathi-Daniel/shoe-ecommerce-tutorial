@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import apiFetch from '../utils/apiFetch.jsx';
 
 export default function useProducts({ limit = 0, search = '', categoryFilter = '', sort = '', page = 1 }) {
   const [products, setProducts] = useState([]);
@@ -27,13 +26,8 @@ export default function useProducts({ limit = 0, search = '', categoryFilter = '
         params.append('limit', limit);
       }
 
-      const res = await fetch(`${API_URL}/api/products?${params.toString()}`, {
+      const res = await apiFetch(`/api/products?${params.toString()}`, {
         method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
       });
 
       if (!res.ok) {

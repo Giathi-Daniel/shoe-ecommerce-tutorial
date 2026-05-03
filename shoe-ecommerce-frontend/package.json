@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node server.js",
+    "build": "vite build --outDir dist/client && vite build --ssr src/entry-server.jsx --outDir dist/server",
     "lint": "eslint .",
-    "preview": "vite preview",
+    "preview": "NODE_ENV=production node server.js",
     "init:tailwind": "tailwindcss init -p"
   },
   "dependencies": {

@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import apiFetch from '../utils/apiFetch.jsx';
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -17,11 +18,7 @@ export default function ProductDetails() {
   useEffect(() => {
     async function fetchProduct() {
       try {
-        const res = await fetch(`/api/products/${id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
+        const res = await apiFetch(`/api/products/${id}`);
 
         if (!res.ok) {
           toast.error('Product not found.');
@@ -58,7 +55,7 @@ export default function ProductDetails() {
     try {
       addToCart(productId);
       toast.success('Product added to cart!');
-    } catch (err) {
+    } catch {
       toast.error('Failed to add product to cart.');
     }
   };

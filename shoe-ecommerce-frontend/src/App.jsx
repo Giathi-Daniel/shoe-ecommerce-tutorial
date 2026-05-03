@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -7,11 +6,7 @@ import routes from './routes';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 
-import { useCsrfToken } from './utils/useCsrfToken.jsx';
-
 function App() {
-  useCsrfToken();
-
   return (
     <div className="flex flex-col min-h-screen">
       <Header />

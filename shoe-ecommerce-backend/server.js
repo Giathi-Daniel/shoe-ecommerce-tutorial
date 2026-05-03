@@ -1,19 +1,16 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const crypto = require('crypto');
 
 // Security & Middleware
 const cors = require('cors');
 const helmet = require('helmet');
-const cookieParser = require('cookie-parser');
 const hpp = require('hpp');
 const morgan = require('morgan');
 //const mongoSanitize = require('express-mongo-sanitize');
 
 // Custom Middleware
 const errorHandler = require('./middleware/errorHandler');
-const csrfVerify = require('./middleware/csrfProtection');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const logger = require('./utils/logger');
 
@@ -38,10 +35,9 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 }));
-
-app.use(cookieParser());
 
 // Security Middlewares
 app.use(helmet({
@@ -83,30 +79,6 @@ app.use(hpp()); // HTTP Parameter Pollution protection
 // Rate limiting for /api routes
 app.use('/api', apiLimiter);
 
-// --- CSRF Token Endpoint ---
-// Expose CSRF token and set cookie
-app.get('/api/csrf-token', (req, res) => {
-  let csrfToken = req.cookies.csrfToken;
-
-  if (!csrfToken) {
-    csrfToken = crypto.randomBytes(32).toString('hex');
-  }
-
-  res.cookie('csrfToken', csrfToken, {
-    httpOnly: false, 
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 1000 
-  });
-
-  // Send token in header and JSON response
-  res.setHeader('X-CSRF-Token', csrfToken);
-  res.json({ csrfToken });
-});
-
-// --- CSRF Verification Middleware ---
-app.use(csrfVerify);
-
 // --- CSP Reporting Route ---
 app.post('/csp-report', express.json({ type: ['json', 'application/csp-report'] }), (req, res) => {
   console.error('CSP Violation:', req.body);
@@ -124,6 +96,7 @@ app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/cart', require('./routes/cartRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/paypal', require('./routes/paypalRoutes'));
 // app.use('/api/payments', require('./routes/paymentRoutes')); 
 
 app.use(errorHandler);

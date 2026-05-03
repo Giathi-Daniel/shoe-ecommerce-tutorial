@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import apiFetch, { getAuthToken, setAuthToken } from '../utils/apiFetch.jsx';
 
 const AuthContext = createContext();
-const API_URL = import.meta.env.VITE_API_URL;
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -13,30 +13,16 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // --- Centralized CSRF token setup ---
-  const initCsrfToken = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/csrf-token`, {
-        credentials: 'include',
-      });
-      const data = await res.json();
-
-      if (data.csrfToken) {
-        localStorage.setItem('csrfToken', data.csrfToken);
-      } else {
-        console.warn('CSRF token not found in response');
-      }
-    } catch (err) {
-      console.error('Failed to initialize CSRF token:', err);
-    }
-  };
-
   // --- Fetch the user profile ---
   const fetchProfile = async () => {
+    if (!getAuthToken()) {
+      setUser(null);
+      return;
+    }
+
     try {
-      const res = await fetch(`${API_URL}/api/auth/profile`, {
+      const res = await apiFetch('/api/auth/profile', {
         method: 'GET',
-        credentials: 'include', 
       });
 
       if (res.status === 401 || res.status === 403) {
@@ -57,33 +43,27 @@ export function AuthProvider({ children }) {
   // --- Logout function ---
   const logout = async () => {
     try {
-      await fetch(`${API_URL}/api/auth/logout`, {
+      await apiFetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include',
       });
     } catch (err) {
       console.error('Logout failed:', err);
     }
 
-    localStorage.removeItem('csrfToken'); 
+    setAuthToken(null);
     setUser(null);
     navigate('/');
-    initCsrfToken(); 
   };
 
 
-  // --- On mount: check auth + initialize CSRF ---
+  // --- On mount: check auth ---
   useEffect(() => {
-    const init = async () => {
-      await initCsrfToken();
-      await fetchProfile();
-    };
-    init();
+    fetchProfile();
   }, []);
 
-  const afterLogin = async () => {
+  const afterLogin = async (token) => {
     try {
-      await initCsrfToken();
+      setAuthToken(token);
       await fetchProfile();
     } catch (error) {
       console.error('Error during afterLogin:', error);

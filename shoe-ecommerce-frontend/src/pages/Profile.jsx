@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import apiFetch from '../utils/apiFetch.jsx';
 
 export default function Profile() {
   const { user, logout } = useAuth();
@@ -29,10 +30,8 @@ export default function Profile() {
     setIsDeleting(true);
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/auth/delete-account', {
+      const res = await apiFetch('/api/auth/delete-account', {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {

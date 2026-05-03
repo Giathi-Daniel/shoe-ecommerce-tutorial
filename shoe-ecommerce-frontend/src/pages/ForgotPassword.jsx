@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import AuthFormInput from '../components/AuthFormInput';
 import AuthButton from '../components/AuthButton';
-import fetchWithCsrf from '../utils/fetchWithCsrf';
+import apiFetch from '../utils/apiFetch.jsx';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -29,7 +29,7 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      const res = await fetchWithCsrf('/api/auth/forgot-password', {
+      const res = await apiFetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -50,7 +50,7 @@ export default function ForgotPassword() {
   return (
     <div className="flex items-center justify-center min-h-screen px-4 py-10 bg-gray-50 animate-fade-in">
       <div className="w-full max-w-md p-8 space-y-6 bg-white shadow-xl rounded-xl">
-        <h2 className="text-2xl font-bold text-center text-gray-800">Forgot Password 🔐</h2>
+        <h2 className="text-2xl font-bold text-center text-gray-800">Forgot Password</h2>
 
         <form className="space-y-5" onSubmit={handleSubmit} noValidate>
           <AuthFormInput

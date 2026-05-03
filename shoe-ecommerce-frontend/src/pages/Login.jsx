@@ -4,7 +4,7 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import AuthFormInput from '../components/AuthFormInput';
 import AuthButton from '../components/AuthButton';
 import { toast } from 'react-toastify';
-import fetchWithCsrf from '../utils/fetchWithCsrf'; 
+import apiFetch from '../utils/apiFetch.jsx';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -39,7 +39,7 @@ export default function Login() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetchWithCsrf('/api/auth/login', {
+      const res = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -51,7 +51,7 @@ export default function Login() {
         throw new Error(data.message || 'Invalid email or password');
       }
 
-      await afterLogin();
+      await afterLogin(data.token);
 
       toast.success('Logged in successfully!');
       navigate('/');

@@ -1,8 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import fetchWithCsrf from "../utils/fetchWithCsrf";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import apiFetch from "../utils/apiFetch.jsx";
+import { useAuth } from "./AuthContext.jsx";
 
 const CartContext = createContext();
 
@@ -13,14 +12,21 @@ export function useCart() {
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   // --- Fetch cart on mount ---
   useEffect(() => {
+    if (!user) {
+      setCartItems([]);
+      setLoading(false);
+      return;
+    }
+
     const fetchCart = async () => {
+      setLoading(true);
       try {
-        const res = await fetchWithCsrf(`${API_URL}/api/cart`, {
+        const res = await apiFetch('/api/cart', {
           method: "GET",
-          credentials: "include",
         });
 
         if (!res.ok) throw new Error("Failed to fetch cart items");
@@ -36,15 +42,14 @@ export function CartProvider({ children }) {
     };
 
     fetchCart();
-  }, []);
+  }, [user]);
 
   // --- Add to cart ---
   const addToCart = async (productId, quantity = 1) => {
     try {
-      const res = await fetchWithCsrf(`${API_URL}/api/cart`, {
+      const res = await apiFetch('/api/cart', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ productId, quantity }),
       });
 
@@ -61,9 +66,8 @@ export function CartProvider({ children }) {
   // --- Remove from cart ---
   const removeFromCart = async (productId) => {
     try {
-      const res = await fetchWithCsrf(`${API_URL}/api/cart/${productId}`, {
+      const res = await apiFetch(`/api/cart/${productId}`, {
         method: "DELETE",
-        credentials: "include",
       });
 
       const data = await res.json();
@@ -78,10 +82,9 @@ export function CartProvider({ children }) {
   // --- Update quantity ---
   const updateQuantity = async (productId, quantity) => {
     try {
-      const res = await fetchWithCsrf(`${API_URL}/api/cart/${productId}`, {
+      const res = await apiFetch(`/api/cart/${productId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ quantity }),
       });
 
@@ -97,9 +100,8 @@ export function CartProvider({ children }) {
   // --- Increment ---
   const incrementItem = async (productId) => {
     try {
-      const res = await fetchWithCsrf(`${API_URL}/api/cart/${productId}/increment`, {
+      const res = await apiFetch(`/api/cart/${productId}/increment`, {
         method: "PATCH",
-        credentials: "include",
       });
 
       const data = await res.json();
@@ -114,9 +116,8 @@ export function CartProvider({ children }) {
   // --- Decrement ---
   const decrementItem = async (productId) => {
     try {
-      const res = await fetchWithCsrf(`${API_URL}/api/cart/${productId}/decrement`, {
+      const res = await apiFetch(`/api/cart/${productId}/decrement`, {
         method: "PATCH",
-        credentials: "include",
       });
 
       const data = await res.json();

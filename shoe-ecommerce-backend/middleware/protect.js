@@ -1,9 +1,10 @@
 const jwt = require('jsonwebtoken')
 
 const protect = (req, res, next) => {
-    const token = req.cookies.token;
+    const authHeader = req.headers.authorization || '';
+    const [scheme, token] = authHeader.split(' ');
 
-    if(!token) {
+    if(scheme !== 'Bearer' || !token) {
         return res.status(401).json({ message: 'Not authorized, token missing' })
     }
 

@@ -1,5 +1,5 @@
-const paypalClient = require('../utils/paypal')
-const paypal = require('@paypal/paypal-server-sdk')
+const { randomUUID } = require('crypto')
+const { ordersController } = require('../utils/paypal')
 const Product = require('../models/Product')
 
 
@@ -27,36 +27,37 @@ exports.createOrder = async (req, res, next) => {
 
       validatedItems.push({
         name: product.name,
-        unit_amount: {
-          currency_code: 'USD',
+        unitAmount: {
+          currencyCode: 'USD',
           value: product.price.toFixed(2),
         },
         quantity: quantity.toString(),
       });
     }
 
-    const request = new paypal.orders.OrdersCreateRequest();
-    request.prefer('return=representation');
-    request.requestBody({
-      intent: 'CAPTURE',
-      purchase_units: [
-        {
-          amount: {
-            currency_code: 'USD',
-            value: totalAmount.toFixed(2),
-            breakdown: {
-              item_total: {
-                currency_code: 'USD',
-                value: totalAmount.toFixed(2),
+    const order = await ordersController.createOrder({
+      prefer: 'return=representation',
+      paypalRequestId: randomUUID(),
+      body: {
+        intent: 'CAPTURE',
+        purchaseUnits: [
+          {
+            amount: {
+              currencyCode: 'USD',
+              value: totalAmount.toFixed(2),
+              breakdown: {
+                itemTotal: {
+                  currencyCode: 'USD',
+                  value: totalAmount.toFixed(2),
+                },
               },
             },
+            items: validatedItems,
           },
-          items: validatedItems,
-        },
-      ],
+        ],
+      },
     });
 
-    const order = await paypalClient.execute(request);
     res.status(200).json({
         id: order.result.id,
         status: order.result.status,             
@@ -74,10 +75,11 @@ exports.captureOrder = async(req, res, next) => {
     try{
         const { orderID } = req.body
 
-        const request = new paypal.orders.OrdersCaptureRequest(orderID);
-        request.requestBody({})
-
-        const capture = await paypalClient.execute(request);
+        const capture = await ordersController.captureOrder({
+          id: orderID,
+          prefer: 'return=representation',
+          body: {},
+        });
         res.status(200).json({ details: capture.result })
     } catch (err) {
         console.error('PayPal Error:', err);

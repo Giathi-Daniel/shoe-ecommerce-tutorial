@@ -7,6 +7,7 @@ const logger = require('../utils/logger');
 
 const Cart = require('../models/Cart');
 const Order = require('../models/Order');
+const Wishlist = require('../models/Wishlist');
 
 
 exports.register = async (req, res, next) => {
@@ -20,12 +21,11 @@ exports.register = async (req, res, next) => {
 
     const newUser = await User.create({ email, password, name });
 
-    // Sets JWT in cookie
-    generateToken(res, newUser._id);
+    const token = generateToken(newUser._id);
 
-    // Return only a success message
     res.status(201).json({
       message: 'User registered successfully',
+      token,
       user: {
         id: newUser._id,
         email: newUser.email,
@@ -66,7 +66,7 @@ exports.login = async (req, res, next) => {
     logger.info(`User ${email} logged in successfully`);
     await resetLoginAttempts(user);
 
-    const token = generateToken(res, user._id); // updated to return token
+    const token = generateToken(user._id);
 
     res.status(200).json({ message: 'Login successful', token });
   } catch (err) {
@@ -76,7 +76,6 @@ exports.login = async (req, res, next) => {
 };
 
 exports.logout = (req, res) => {
-    res.clearCookie('token')
     res.status(200).json({ message: 'Logged out' })
 }
 
@@ -192,7 +191,6 @@ exports.deleteAccount = async (req, res, next) => {
 
     logger.info(`User ${userId} deleted their account and associated data.`);
 
-    res.clearCookie('token');
     res.status(200).json({ message: 'Account and associated data deleted.' });
   } catch (err) {
     next(err);
