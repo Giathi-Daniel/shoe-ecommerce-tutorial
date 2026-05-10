@@ -1,9 +1,11 @@
 import { useCart } from "../context/CartContext";
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom"; 
+import { Link, useNavigate } from "react-router-dom"; 
+import { formatCurrency } from "../utils/productUtils.js";
 
 export default function Cart() {
   const { cartItems, removeFromCart, loading, incrementItem, decrementItem, updateQuantity } = useCart();
+  const navigate = useNavigate();
 
   const [localQuantities, setLocalQuantities] = useState({});
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -24,13 +26,15 @@ export default function Cart() {
   useEffect(() => {
     if (isInitialLoad) return; 
 
+    const activeTimers = timers.current;
+
     Object.entries(localQuantities).forEach(([productId, qty]) => {
-      if (timers.current[productId]) {
-        clearTimeout(timers.current[productId]);
+      if (activeTimers[productId]) {
+        clearTimeout(activeTimers[productId]);
       }
 
       if (qty !== "" && qty > 0) {
-        timers.current[productId] = setTimeout(() => {
+        activeTimers[productId] = setTimeout(() => {
           const cartItem = cartItems.find(item => item.product._id === productId);
           if (cartItem && qty !== cartItem.quantity) {
             updateQuantity(productId, qty);
@@ -40,7 +44,7 @@ export default function Cart() {
     });
 
     return () => {
-      Object.values(timers.current).forEach(clearTimeout);
+      Object.values(activeTimers).forEach(clearTimeout);
     };
   }, [localQuantities, updateQuantity, cartItems, isInitialLoad]);
 
@@ -131,7 +135,7 @@ export default function Cart() {
                 +
               </button>
             </div>
-            <p className="mt-2 font-bold text-accent">${product.price.toFixed(2)}</p>
+            <p className="mt-2 font-bold text-accent">{formatCurrency(product.price)}</p>
           </div>
 
           <button
@@ -145,14 +149,15 @@ export default function Cart() {
 
       <div className="mt-8 flex flex-col md:flex-row items-center justify-between">
         <p className="text-lg font-semibold mb-4 md:mb-0">
-          Total: ${total.toFixed(2)}
+          Total: {formatCurrency(total)}
         </p>
         <button
           disabled={cartItems.length === 0}
+          onClick={() => navigate('/checkout')}
           className={`px-6 py-2 rounded text-white transition ${
             cartItems.length === 0
               ? "bg-gray-400 cursor-not-allowed"
-              : "bg-accent hover:bg-blue-600"
+              : "bg-accent hover:bg-rose-600"
           }`}
         >
           Proceed to Checkout

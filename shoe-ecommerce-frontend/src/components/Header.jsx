@@ -22,9 +22,10 @@ export default function Header() {
   const authMenuItems = [
     { label: 'Home', href: '/' },
     { label: 'Products', href: '/products' },
+    { label: 'Wishlist', href: '/wishlist' },
     { label: 'Cart', href: '/cart' },
     { label: 'Profile', href: '/profile' },
-    { label: 'Logout', onclick: handleLogout},
+    { label: 'Logout', onClick: handleLogout },
   ];
 
   return (

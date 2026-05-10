@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apiFetch, { getAuthToken, setAuthToken } from '../utils/apiFetch.jsx';
@@ -13,8 +13,23 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
+  // --- Logout function ---
+  const logout = useCallback(async () => {
+    try {
+      await apiFetch('/api/auth/logout', {
+        method: 'POST',
+      });
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+
+    setAuthToken(null);
+    setUser(null);
+    navigate('/');
+  }, [navigate]);
+
   // --- Fetch the user profile ---
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!getAuthToken()) {
       setUser(null);
       return;
@@ -37,29 +52,13 @@ export function AuthProvider({ children }) {
       console.error('Error fetching profile:', err);
       logout(); 
     }
-  };
-
-
-  // --- Logout function ---
-  const logout = async () => {
-    try {
-      await apiFetch('/api/auth/logout', {
-        method: 'POST',
-      });
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
-
-    setAuthToken(null);
-    setUser(null);
-    navigate('/');
-  };
+  }, [logout]);
 
 
   // --- On mount: check auth ---
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   const afterLogin = async (token) => {
     try {

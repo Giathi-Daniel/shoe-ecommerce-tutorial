@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import apiFetch from '../utils/apiFetch.jsx';
+import { formatCurrency, normalizeProduct } from '../utils/productUtils.js';
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -28,7 +29,7 @@ export default function ProductDetails() {
 
         const data = await res.json();
         if (data.success) {
-          setProduct(data.product);
+          setProduct(normalizeProduct(data.product));
         } else {
           toast.error('Product not found.');
           navigate(-1);
@@ -80,8 +81,9 @@ export default function ProductDetails() {
       <div className="flex flex-col gap-6 md:flex-row">
         <div className="w-full md:w-1/2">
           <img
-            src={product.image || "/placeholder.jpg"}
+            src={product.image}
             alt={product.name}
+            decoding="async"
             className="object-cover w-full bg-gray-200 h-96 rounded-xl"
           />
         </div>
@@ -91,7 +93,7 @@ export default function ProductDetails() {
             <h1 className="mb-2 text-3xl font-bold text-primary">{product.name}</h1>
             <p className="mb-4 text-lg text-gray-600">{product.description}</p>
             <span className="inline-block mb-4 text-2xl font-semibold text-accent">
-              ${product.price}
+              {formatCurrency(product.price)}
             </span>
           </div>
 

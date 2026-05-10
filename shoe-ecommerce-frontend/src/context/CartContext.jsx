@@ -1,12 +1,22 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import apiFetch from "../utils/apiFetch.jsx";
 import { useAuth } from "./AuthContext.jsx";
+import { normalizeCartItem } from "../utils/productUtils.js";
 
 const CartContext = createContext();
 
 export function useCart() {
-  return useContext(CartContext);
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error("useCart must be used within a CartProvider");
+  }
+  return context;
+}
+
+function getCartItems(payload) {
+  const items = payload?.cartItems || payload?.cart?.items || [];
+  return Array.isArray(items) ? items.map(normalizeCartItem) : [];
 }
 
 export function CartProvider({ children }) {
@@ -32,7 +42,7 @@ export function CartProvider({ children }) {
         if (!res.ok) throw new Error("Failed to fetch cart items");
 
         const data = await res.json();
-        setCartItems(data.cartItems || []);
+        setCartItems(getCartItems(data));
       } catch (err) {
         console.error("Failed to fetch cart:", err);
         toast.error(err.message || "Failed to load cart");
@@ -45,26 +55,25 @@ export function CartProvider({ children }) {
   }, [user]);
 
   // --- Add to cart ---
-  const addToCart = async (productId, quantity = 1) => {
+  const addToCart = useCallback(async (productId, quantity = 1) => {
     try {
       const res = await apiFetch('/api/cart', {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, quantity }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to add item");
 
-      setCartItems(data.cartItems || []);
+      setCartItems(getCartItems(data));
       toast.success("Item added to cart");
     } catch (err) {
       toast.error(err.message || "Failed to add item");
     }
-  };
+  }, []);
 
   // --- Remove from cart ---
-  const removeFromCart = async (productId) => {
+  const removeFromCart = useCallback(async (productId) => {
     try {
       const res = await apiFetch(`/api/cart/${productId}`, {
         method: "DELETE",
@@ -73,32 +82,31 @@ export function CartProvider({ children }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to remove item");
 
-      setCartItems(data.cartItems || []);
+      setCartItems(getCartItems(data));
     } catch (err) {
       toast.error(err.message || "Failed to remove item");
     }
-  };
+  }, []);
 
   // --- Update quantity ---
-  const updateQuantity = async (productId, quantity) => {
+  const updateQuantity = useCallback(async (productId, quantity) => {
     try {
       const res = await apiFetch(`/api/cart/${productId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quantity }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update quantity");
 
-      setCartItems(data.cartItems || []);
+      setCartItems(getCartItems(data));
     } catch (err) {
       toast.error(err.message || "Failed to update quantity");
     }
-  };
+  }, []);
 
   // --- Increment ---
-  const incrementItem = async (productId) => {
+  const incrementItem = useCallback(async (productId) => {
     try {
       const res = await apiFetch(`/api/cart/${productId}/increment`, {
         method: "PATCH",
@@ -107,14 +115,14 @@ export function CartProvider({ children }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to increment");
 
-      setCartItems(data.cartItems || []);
+      setCartItems(getCartItems(data));
     } catch (err) {
       toast.error(err.message || "Failed to increment item");
     }
-  };
+  }, []);
 
   // --- Decrement ---
-  const decrementItem = async (productId) => {
+  const decrementItem = useCallback(async (productId) => {
     try {
       const res = await apiFetch(`/api/cart/${productId}/decrement`, {
         method: "PATCH",
@@ -123,24 +131,24 @@ export function CartProvider({ children }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to decrement");
 
-      setCartItems(data.cartItems || []);
+      setCartItems(getCartItems(data));
     } catch (err) {
       toast.error(err.message || "Failed to decrement item");
     }
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    cartItems,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    incrementItem,
+    decrementItem,
+    loading,
+  }), [addToCart, cartItems, decrementItem, incrementItem, loading, removeFromCart, updateQuantity]);
 
   return (
-    <CartContext.Provider
-      value={{
-        cartItems,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        incrementItem,
-        decrementItem,
-        loading,
-      }}
-    >
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );

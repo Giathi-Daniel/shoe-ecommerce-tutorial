@@ -13,7 +13,7 @@ export default function NotFound() {
       const data = await res.json();
       const parsedQuote = JSON.parse(data.contents);
       setQuote(parsedQuote[0]);
-      } catch (err) {
+      } catch {
         setQuote({ q: 'Oops! Failed to load quote.', a: '' });
       }
     };

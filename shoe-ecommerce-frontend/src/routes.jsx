@@ -10,11 +10,12 @@ const Products = lazy(() => import('./pages/Products'));
 
 import ProductDetails from './pages/ProductDetails';
 import Cart from './pages/Cart';
-// import Checkout from './pages/Checkout';
+import Checkout from './pages/Checkout';
 
 import PrivateRoute from './private/PrivateRoute'; 
 
 const Profile = lazy(() => import('./pages/Profile'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
 
 const routes = [
   { path: '/', element: <Suspense fallback={<div>Loading...</div>}><Home /></Suspense> },
@@ -30,6 +31,22 @@ const routes = [
   { path: '/login', element: <Suspense fallback={<div>Loading...</div>}><Login /></Suspense> },
   { path: '/signup', element: <Suspense fallback={<div>Loading...</div>}><Signup /></Suspense> },
   { path: '/forgot-password', element: <Suspense fallback={<div>Loading...</div>}><ForgotPassword /></Suspense> },
+  {
+    path: '/checkout',
+    element: (
+      <PrivateRoute>
+        <Suspense fallback={<div>Loading...</div>}><Checkout /></Suspense>
+      </PrivateRoute>
+    ),
+  },
+  {
+    path: '/wishlist',
+    element: (
+      <PrivateRoute>
+        <Suspense fallback={<div>Loading...</div>}><Wishlist /></Suspense>
+      </PrivateRoute>
+    ),
+  },
   {
     path: '/profile',
     element: (

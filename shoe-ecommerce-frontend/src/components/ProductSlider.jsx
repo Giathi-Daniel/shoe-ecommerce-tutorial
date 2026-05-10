@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css"; 
 import "slick-carousel/slick/slick-theme.css";
@@ -18,7 +18,7 @@ const ProductSlider = ({ products }) => {
     nextArrow: (
       <button 
         className="p-2 text-gray-700 bg-white border-2 border-gray-300 rounded-full shadow-lg slick-next-arrow hover:bg-gray-200"
-        onClick={() => sliderRef.current.slickNext()} 
+        onClick={() => sliderRef.current?.slickNext()} 
       >
         <ChevronRightIcon className="w-6 h-6" />
       </button>
@@ -26,7 +26,7 @@ const ProductSlider = ({ products }) => {
     prevArrow: (
       <button 
         className="p-2 text-gray-700 bg-white border-2 border-gray-300 rounded-full shadow-lg slick-prev-arrow hover:bg-gray-200"
-        onClick={() => sliderRef.current.slickPrev()} 
+        onClick={() => sliderRef.current?.slickPrev()} 
       >
         <ChevronLeftIcon className="w-6 h-6" />
       </button>
@@ -69,13 +69,13 @@ const ProductSlider = ({ products }) => {
 
       <div className="flex justify-between w-full px-4 mb-4">
         <button
-          onClick={() => sliderRef.current.slickPrev()} // Trigger previous slide on click
+          onClick={() => sliderRef.current?.slickPrev()}
           className="p-2 text-gray-700 bg-white border-2 border-gray-300 rounded-full shadow-lg slick-prev-arrow hover:bg-gray-200"
         >
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
         <button
-          onClick={() => sliderRef.current.slickNext()} // Trigger next slide on click
+          onClick={() => sliderRef.current?.slickNext()}
           className="p-2 text-gray-700 bg-white border-2 border-gray-300 rounded-full shadow-lg slick-next-arrow hover:bg-gray-200"
         >
           <ChevronRightIcon className="w-6 h-6" />
@@ -84,8 +84,8 @@ const ProductSlider = ({ products }) => {
       
       {/* Slider */}
       <Slider ref={sliderRef} {...cleanSliderProps(sliderSettings)}>
-        {products.map((product, idx) => (
-          <div key={`${product._id}-${idx}`} className="px-2">
+        {products.map((product) => (
+          <div key={product._id} className="px-2">
             <ProductCard product={product} />
           </div>
         ))}

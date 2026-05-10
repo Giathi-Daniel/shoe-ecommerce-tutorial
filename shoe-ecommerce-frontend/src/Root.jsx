@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { CartProvider } from './context/CartContext.jsx';
+import { WishlistProvider } from './context/WishlistContext.jsx';
 
 export default function Root({ router }) {
   return (
@@ -9,7 +10,9 @@ export default function Root({ router }) {
       {router(
         <AuthProvider>
           <CartProvider>
-            <App />
+            <WishlistProvider>
+              <App />
+            </WishlistProvider>
           </CartProvider>
         </AuthProvider>
       )}

@@ -1,20 +1,18 @@
-import { useState, useEffect } from 'react';
 import ProductCard from '../components/ProductCard';
 import { Link } from 'react-router-dom';
 import useProducts from '../hooks/useProducts';
 
-export default function Home() {
-  const [loading, setLoading] = useState(true);
+const categories = [
+  { label: 'Sports', value: 'sports' },
+  { label: 'Casual', value: 'casual' },
+  { label: 'Formal', value: 'formal' },
+  { label: 'Women', value: 'women' },
+];
 
+export default function Home() {
   const { products: featuredProducts, loading: productsLoading } = useProducts({
     limit: 4, 
   });
-
-  useEffect(() => {
-    if (!productsLoading) {
-      setLoading(false);
-    }
-  }, [productsLoading]);
 
   return (
     <section className="px-4 py-16 mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -41,7 +39,7 @@ export default function Home() {
       </p>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {loading || productsLoading
+        {productsLoading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
@@ -52,8 +50,8 @@ export default function Home() {
                 <div className="w-1/2 h-4 bg-gray-200 rounded"></div>
               </div>
             ))
-          : featuredProducts.map((product, idx) => (
-              <ProductCard key={`${product._id}-${idx}`} product={product} />
+          : featuredProducts.map((product) => (
+              <ProductCard key={product._id} product={product} />
             ))}
       </div>
 
@@ -70,30 +68,14 @@ export default function Home() {
       <section className="mt-16">
         <h2 className="mb-6 text-3xl font-bold text-primary">Shop by Category</h2>
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-          <div className="p-8 text-center bg-gray-200 rounded-lg category-card">
-            <h3 className="mb-4 text-xl font-semibold text-primary">Sneakers</h3>
-            <Link to="/" className="text-accent hover:text-accent-dark">
-              Shop Now
-            </Link>
-          </div>
-          <div className="p-8 text-center bg-gray-200 rounded-lg category-card">
-            <h3 className="mb-4 text-xl font-semibold text-primary">Boots</h3>
-            <Link to="/" className="text-accent hover:text-accent-dark">
-              Shop Now
-            </Link>
-          </div>
-          <div className="p-8 text-center bg-gray-200 rounded-lg category-card">
-            <h3 className="mb-4 text-xl font-semibold text-primary">Sandals</h3>
-            <Link to="/" className="text-accent hover:text-accent-dark">
-              Shop Now
-            </Link>
-          </div>
-          <div className="p-8 text-center bg-gray-200 rounded-lg category-card">
-            <h3 className="mb-4 text-xl font-semibold text-primary">Casual</h3>
-            <Link to="/" className="text-accent hover:text-accent-dark">
-              Shop Now
-            </Link>
-          </div>
+          {categories.map((category) => (
+            <div key={category.value} className="p-8 text-center bg-gray-200 rounded-lg category-card">
+              <h3 className="mb-4 text-xl font-semibold text-primary">{category.label}</h3>
+              <Link to={`/products?category=${category.value}`} className="text-accent hover:text-accent-dark">
+                Shop Now
+              </Link>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -102,7 +84,7 @@ export default function Home() {
         <h2 className="mb-4 text-3xl font-bold">Summer Sale - Up to 50% Off!</h2>
         <p className="mb-6 text-xl">Hurry up, limited time offer!</p>
         <Link
-          to="/"
+          to="/products"
           className="inline-block px-6 py-3 bg-white rounded-full text-accent hover:bg-accent-dark"
         >
           Shop Sale

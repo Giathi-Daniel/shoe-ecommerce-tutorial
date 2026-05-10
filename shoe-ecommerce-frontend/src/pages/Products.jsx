@@ -1,19 +1,29 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import useDebounce from "../hooks/useDebounce"; 
 import useProducts from "../hooks/useProducts";
 import ProductSlider from "../components/ProductSlider"; 
 
+const categories = [
+  { label: 'Men', value: 'men' },
+  { label: 'Women', value: 'women' },
+  { label: 'Kids', value: 'kids' },
+  { label: 'Sports', value: 'sports' },
+  { label: 'Casual', value: 'casual' },
+  { label: 'Formal', value: 'formal' },
+];
+
 export default function Products() {
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || "");
   const [page, setPage] = useState(1);
-  const [products, setProducts] = useState([]);
 
   const debouncedSearch = useDebounce(search, 300);
 
-  const { products: fetchedProducts, loading, hasMore } = useProducts({
+  const { products, loading, hasMore } = useProducts({
     limit: 16, 
     search: debouncedSearch,
     categoryFilter,
@@ -24,14 +34,6 @@ export default function Products() {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, categoryFilter, sort]);
-
-  useEffect(() => {
-    if (page === 1) {
-      setProducts(fetchedProducts); 
-    } else {
-      setProducts((prev) => [...prev, ...fetchedProducts]);
-    }
-  }, [fetchedProducts, page]);
 
   return (
     <section className="px-4 py-10 mx-auto mt-10 max-w-7xl">
@@ -59,25 +61,39 @@ export default function Products() {
           onChange={(e) => setCategoryFilter(e.target.value)}
         >
           <option value="">All Categories</option>
-          <option value="Sneakers">Sneakers</option>
-          <option value="Formal">Formal</option>
-          <option value="Running">Running</option>
+          {categories.map((category) => (
+            <option key={category.value} value={category.value}>
+              {category.label}
+            </option>
+          ))}
         </select>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {products.slice(0, 16).map((product, idx) => (
-          <div key={`${product._id}-${idx}`}>
+        {products.map((product) => (
+          <div key={product._id}>
             <ProductCard product={product} />
           </div>
         ))}
       </div>
 
-      {products.length > 16 && (
+      {hasMore && products.length > 0 && (
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            disabled={loading}
+            className="px-6 py-2 bg-primary text-white rounded hover:bg-secondary transition disabled:opacity-50"
+          >
+            {loading ? 'Loading...' : 'Load More'}
+          </button>
+        </div>
+      )}
+
+      {products.length >= 8 && (
         <ProductSlider products={products} />
       )}
 
-      {loading && <p className="mt-4 text-center">Loading...</p>}
+
     </section>
   );
 }
