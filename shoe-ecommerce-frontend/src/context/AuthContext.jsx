@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apiFetch, { getAuthToken, setAuthToken } from '../utils/apiFetch.jsx';
@@ -6,75 +6,70 @@ import apiFetch, { getAuthToken, setAuthToken } from '../utils/apiFetch.jsx';
 const AuthContext = createContext();
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  return context;
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // --- Logout function ---
-  const logout = useCallback(async () => {
-    try {
-      await apiFetch('/api/auth/logout', {
-        method: 'POST',
-      });
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
-
+  const clearSession = useCallback(() => {
     setAuthToken(null);
     setUser(null);
-    navigate('/');
-  }, [navigate]);
+  }, []);
 
-  // --- Fetch the user profile ---
+  const logout = useCallback(async () => {
+    try {
+      await apiFetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Logout request failed:', err);
+    }
+    clearSession();
+    navigate('/');
+  }, [clearSession, navigate]);
+
   const fetchProfile = useCallback(async () => {
     if (!getAuthToken()) {
       setUser(null);
+      setLoading(false);
       return;
     }
 
     try {
-      const res = await apiFetch('/api/auth/profile', {
-        method: 'GET',
-      });
-
-      if (res.status === 401 || res.status === 403) {
-        throw new Error('Session expired');
+      const res = await apiFetch('/api/auth/profile');
+      if (res.status === 401 || res.status === 403 || res.status === 404) {
+        clearSession();
+        return;
       }
-
       if (!res.ok) throw new Error('Failed to fetch user profile');
-
-      const data = await res.json();
-      setUser(data);
+      setUser(await res.json());
     } catch (err) {
       console.error('Error fetching profile:', err);
-      logout(); 
+    } finally {
+      setLoading(false);
     }
-  }, [logout]);
+  }, [clearSession]);
 
-
-  // --- On mount: check auth ---
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
 
-  const afterLogin = async (token) => {
+  const afterLogin = useCallback(async (token) => {
+    setAuthToken(token);
     try {
-      setAuthToken(token);
       await fetchProfile();
-    } catch (error) {
-      console.error('Error during afterLogin:', error);
-      toast.error('Failed to initialize session')
+    } catch {
+      toast.error('Failed to initialize session');
     }
-  };
+  }, [fetchProfile]);
 
-
-
-  return (
-    <AuthContext.Provider value={{ user, setUser, logout, fetchProfile, afterLogin }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, loading, isAdmin: user?.role === 'admin', setUser, logout, fetchProfile, afterLogin }),
+    [user, loading, logout, fetchProfile, afterLogin]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

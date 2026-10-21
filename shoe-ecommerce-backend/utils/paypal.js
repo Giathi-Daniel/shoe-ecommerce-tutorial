@@ -1,18 +1,17 @@
 const { Client, Environment, OrdersController } = require('@paypal/paypal-server-sdk');
 
-const environment =
-  process.env.PAYPAL_ENVIRONMENT === 'production'
-    ? Environment.Production
-    : Environment.Sandbox;
+const isConfigured = !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
 
-const client = new Client({
-  clientCredentialsAuthCredentials: {
-    oAuthClientId: process.env.PAYPAL_CLIENT_ID,
-    oAuthClientSecret: process.env.PAYPAL_CLIENT_SECRET,
-  },
-  environment,
-});
+const client = isConfigured
+  ? new Client({
+      clientCredentialsAuthCredentials: {
+        oAuthClientId: process.env.PAYPAL_CLIENT_ID,
+        oAuthClientSecret: process.env.PAYPAL_CLIENT_SECRET,
+      },
+      environment: process.env.PAYPAL_ENVIRONMENT === 'production' ? Environment.Production : Environment.Sandbox,
+    })
+  : null;
 
 module.exports = {
-  ordersController: new OrdersController(client),
+  ordersController: client ? new OrdersController(client) : null,
 };

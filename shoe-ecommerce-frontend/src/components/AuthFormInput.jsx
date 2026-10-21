@@ -1,31 +1,28 @@
-export default function AuthFormInput({
-  label,
-  type,
-  name,
-  value,
-  onChange,
-  required = true,
-  error,
-}) {
+export default function AuthFormInput({ label, type = 'text', name, value, onChange, error, hint, autoComplete, required = true, children }) {
   return (
     <div className="mb-4">
-      <label htmlFor={name} className="block mb-1 text-sm font-medium text-gray-700">
-        {label}
-      </label>
-      <input
-        type={type}
-        name={name}
-        id={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        className={`w-full px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${
-          error
-            ? 'border-red-500 focus:ring-red-300'
-            : 'border-gray-300 focus:ring-primary focus:border-primary'
-        }`}
-      />
-      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+      <label htmlFor={name} className="mb-1 block text-sm font-bold">{label}</label>
+      <div className="relative">
+        <input
+          type={type}
+          name={name}
+          id={name}
+          value={value}
+          onChange={onChange}
+          required={required}
+          autoComplete={autoComplete}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${name}-error` : undefined}
+          className={`field ${error ? '!border-[#d00] !ring-[#d00]/20' : ''} ${children ? 'pr-10' : ''}`}
+        />
+        {children}
+      </div>
+      {hint && !error && <p className="mt-1 text-xs text-[#565959]">{hint}</p>}
+      {error && (
+        <p id={`${name}-error`} role="alert" className="mt-1 text-xs text-[#c40000]">
+          <span aria-hidden="true">⚠ </span>{error}
+        </p>
+      )}
     </div>
   );
 }

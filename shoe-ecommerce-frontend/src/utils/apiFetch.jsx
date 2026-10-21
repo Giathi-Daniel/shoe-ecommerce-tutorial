@@ -17,8 +17,7 @@ export function setAuthToken(token) {
 
 export default function apiFetch(url, options = {}) {
   const token = getAuthToken();
-  const isAbsolute = /^https?:\/\//i.test(url);
-  const targetUrl = isAbsolute ? url : `${API_URL}${url}`;
+  const targetUrl = /^https?:\/\//i.test(url) ? url : `${API_URL}${url}`;
 
   return fetch(targetUrl, {
     ...options,
@@ -28,4 +27,15 @@ export default function apiFetch(url, options = {}) {
       ...(options.headers || {}),
     },
   });
+}
+
+export async function apiJson(url, options) {
+  const res = await apiFetch(url, options);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const error = new Error(data.message || 'Something went wrong. Please try again.');
+    error.status = res.status;
+    throw error;
+  }
+  return data;
 }

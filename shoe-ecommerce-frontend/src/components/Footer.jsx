@@ -1,50 +1,69 @@
+import { Link } from 'react-router-dom';
+import Logo from './Logo';
+import { CATEGORIES } from '../utils/productUtils.js';
+
+const COLUMNS = [
+  {
+    title: 'Get to Know Us',
+    links: [
+      { label: 'About ShoeStore', to: '/help/about' },
+      { label: 'Contact Us', to: '/help/contact' },
+      { label: 'Privacy Notice', to: '/help/privacy' },
+      { label: 'Terms of Use', to: '/help/terms' },
+    ],
+  },
+  {
+    title: 'Shop by Category',
+    links: CATEGORIES.map(({ full, value }) => ({ label: full, to: `/products?category=${value}` })),
+  },
+  {
+    title: 'Let Us Help You',
+    links: [
+      { label: 'Your Account', to: '/account' },
+      { label: 'Your Orders', to: '/orders' },
+      { label: 'Shipping & Delivery', to: '/help/shipping' },
+      { label: 'Returns & Replacements', to: '/help/returns' },
+      { label: 'Your Wishlist', to: '/wishlist' },
+    ],
+  },
+];
+
 export default function Footer() {
   return (
-    <footer className="pt-10 pb-6 mt-10 text-white bg-gray-900">
-      <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3">
-          
-          {/* Logo and Description */}
-          <div>
-            <h2 className="text-2xl font-bold">
-              Shoe<span className="text-accent">Store</span>
-            </h2>
-            <p className="mt-3 text-sm text-gray-400">
-              The best place to buy stylish and comfortable shoes. Quality guaranteed, prices you'll love.
-            </p>
-          </div>
+    <footer className="text-white">
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className="w-full bg-nav-hover py-3.5 text-center text-[13px] hover:bg-[#485769]"
+      >
+        Back to top
+      </button>
 
-          {/* Navigation Links */}
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">Quick Links</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a href="/" className="hover:text-accent">Home</a></li>
-              <li><a href="/products" className="hover:text-accent">Products</a></li>
-              <li><a href="/cart" className="hover:text-accent">Cart</a></li>
-              <li><a href="/login" className="hover:text-accent">Login</a></li>
-            </ul>
-          </div>
-
-          {/* Contact & Social */}
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">Contact</h3>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li>Email: support@shoestore.com</li>
-              <li>Phone: +254 716 738 500</li>
-            </ul>
-
-            {/* SOcials */}
-            <div className="flex mt-4 space-x-4">
-              <a href="#" className="hover:text-accent">Facebook</a>
-              <a href="#" className="hover:text-accent">Twitter</a>
-              <a href="#" className="hover:text-accent">Instagram</a>
+      <div className="bg-nav-light">
+        <div className="mx-auto grid max-w-[1000px] grid-cols-2 gap-8 px-6 py-10 md:grid-cols-3">
+          {COLUMNS.map(({ title, links }) => (
+            <div key={title}>
+              <h3 className="mb-3 text-base font-bold">{title}</h3>
+              <ul className="space-y-2 text-sm">
+                {links.map(({ label, to }) => (
+                  <li key={label}>
+                    <Link to={to} className="text-[#ddd] hover:text-white hover:underline">{label}</Link>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          ))}
         </div>
+      </div>
 
-        <div className="pt-6 mt-10 text-sm text-center text-gray-500 border-t border-gray-700">
-          &copy; {new Date().getFullYear()} ShoeStore. All rights reserved.
-        </div>
+      <div className="border-t border-[#3a4553] bg-nav py-8 text-center">
+        <Logo className="mx-auto" />
+        <ul className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-1 px-4 text-xs text-[#ddd]">
+          <li><Link to="/help/terms" className="text-[#ddd] hover:text-white">Conditions of Use</Link></li>
+          <li><Link to="/help/privacy" className="text-[#ddd] hover:text-white">Privacy Notice</Link></li>
+          <li><Link to="/help/contact" className="text-[#ddd] hover:text-white">support@shoestore.com</Link></li>
+        </ul>
+        <p className="mt-2 text-xs text-[#ddd]">&copy; {new Date().getFullYear()} ShoeStore. A portfolio project: no real orders are fulfilled.</p>
       </div>
     </footer>
   );
