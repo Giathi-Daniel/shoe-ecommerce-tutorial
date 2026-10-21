@@ -1,61 +1,48 @@
-import { lazy, Suspense } from 'react';
-
-
-const Home = lazy(() => import('./pages/Home'));
-const NotFound = lazy(() => import('./pages/NotFound'));
-const Login = lazy(() => import('./pages/Login'));
-const Signup = lazy(() => import('./pages/Signup'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const Products = lazy(() => import('./pages/Products'));
-
+import { lazy } from 'react';
+import PrivateRoute from './private/PrivateRoute';
+import Home from './pages/Home';
+import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
+import Info from './pages/Info';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import NotFound from './pages/NotFound';
 
-import PrivateRoute from './private/PrivateRoute'; 
+// Public pages are bundled eagerly so SSR can render them; signed-in pages never render on the server
 
-const Profile = lazy(() => import('./pages/Profile'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const Orders = lazy(() => import('./pages/Orders'));
+const OrderDetails = lazy(() => import('./pages/OrderDetails'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));
+const Account = lazy(() => import('./pages/Account'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Admin = lazy(() => import('./pages/Admin'));
+
+const priv = (element, options) => <PrivateRoute {...options}>{element}</PrivateRoute>;
+
+export const MINIMAL_LAYOUT_PATHS = ['/login', '/signup', '/forgot-password', '/reset-password', '/checkout'];
 
 const routes = [
-  { path: '/', element: <Suspense fallback={<div>Loading...</div>}><Home /></Suspense> },
-  { path: '/products', element: <Suspense fallback={<div>Loading...</div>}><Products /></Suspense> },
-  { path: '/products/:id', element: <Suspense fallback={<div>Loading...</div>}><ProductDetails /></Suspense> },
-  { path: '/cart', 
-    element: (
-      <PrivateRoute>
-        <Suspense fallback={<div>Loading...</div>}><Cart /></Suspense> 
-      </PrivateRoute>
-    ),
-  },
-  { path: '/login', element: <Suspense fallback={<div>Loading...</div>}><Login /></Suspense> },
-  { path: '/signup', element: <Suspense fallback={<div>Loading...</div>}><Signup /></Suspense> },
-  { path: '/forgot-password', element: <Suspense fallback={<div>Loading...</div>}><ForgotPassword /></Suspense> },
-  {
-    path: '/checkout',
-    element: (
-      <PrivateRoute>
-        <Suspense fallback={<div>Loading...</div>}><Checkout /></Suspense>
-      </PrivateRoute>
-    ),
-  },
-  {
-    path: '/wishlist',
-    element: (
-      <PrivateRoute>
-        <Suspense fallback={<div>Loading...</div>}><Wishlist /></Suspense>
-      </PrivateRoute>
-    ),
-  },
-  {
-    path: '/profile',
-    element: (
-      <PrivateRoute>
-        <Suspense fallback={<div>Loading...</div>}><Profile /></Suspense>
-      </PrivateRoute>
-    ),
-  },
-  { path: '*', element: <Suspense fallback={<div>Loading...</div>}><NotFound /></Suspense> },
+  { path: '/', element: <Home /> },
+  { path: '/products', element: <Products /> },
+  { path: '/products/:id', element: <ProductDetails /> },
+  { path: '/help/:topic', element: <Info /> },
+  { path: '/login', element: <Login /> },
+  { path: '/signup', element: <Signup /> },
+  { path: '/forgot-password', element: <ForgotPassword /> },
+  { path: '/reset-password/:token', element: <ResetPassword /> },
+  { path: '/cart', element: priv(<Cart />) },
+  { path: '/checkout', element: priv(<Checkout />) },
+  { path: '/orders', element: priv(<Orders />) },
+  { path: '/orders/:id', element: priv(<OrderDetails />) },
+  { path: '/wishlist', element: priv(<Wishlist />) },
+  { path: '/account', element: priv(<Account />) },
+  { path: '/account/settings', element: priv(<Profile />) },
+  { path: '/admin', element: priv(<Admin />, { adminOnly: true }) },
+  { path: '*', element: <NotFound /> },
 ];
 
 export default routes;

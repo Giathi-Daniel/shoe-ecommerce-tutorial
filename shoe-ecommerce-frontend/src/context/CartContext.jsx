@@ -1,155 +1,110 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { toast } from "react-toastify";
-import apiFetch from "../utils/apiFetch.jsx";
-import { useAuth } from "./AuthContext.jsx";
-import { normalizeCartItem } from "../utils/productUtils.js";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import apiFetch from '../utils/apiFetch.jsx';
+import { useAuth } from './AuthContext.jsx';
+import { calculatePricing, normalizeCartItem } from '../utils/productUtils.js';
 
 const CartContext = createContext();
 
 export function useCart() {
   const context = useContext(CartContext);
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
+  if (!context) throw new Error('useCart must be used within a CartProvider');
   return context;
 }
 
 function getCartItems(payload) {
   const items = payload?.cartItems || payload?.cart?.items || [];
-  return Array.isArray(items) ? items.map(normalizeCartItem) : [];
+  return Array.isArray(items) ? items.map(normalizeCartItem).filter((item) => item.product._id) : [];
 }
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // --- Fetch cart on mount ---
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       setCartItems([]);
       setLoading(false);
       return;
     }
 
-    const fetchCart = async () => {
-      setLoading(true);
-      try {
-        const res = await apiFetch('/api/cart', {
-          method: "GET",
-        });
+    let cancelled = false;
+    setLoading(true);
 
-        if (!res.ok) throw new Error("Failed to fetch cart items");
+    apiFetch('/api/cart')
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Failed to load cart');
+        if (!cancelled) setCartItems(getCartItems(await res.json()));
+      })
+      .catch((err) => !cancelled && toast.error(err.message))
+      .finally(() => !cancelled && setLoading(false));
 
-        const data = await res.json();
-        setCartItems(getCartItems(data));
-      } catch (err) {
-        console.error("Failed to fetch cart:", err);
-        toast.error(err.message || "Failed to load cart");
-      } finally {
-        setLoading(false);
-      }
+    return () => {
+      cancelled = true;
     };
+  }, [user, authLoading]);
 
-    fetchCart();
-  }, [user]);
+  const requireLogin = useCallback((message) => {
+    toast.info(message);
+    navigate('/login', { state: { from: location.pathname + location.search } });
+  }, [navigate, location]);
 
-  // --- Add to cart ---
-  const addToCart = useCallback(async (productId, quantity = 1) => {
+  const mutate = useCallback(async (url, options, fallbackMessage) => {
     try {
-      const res = await apiFetch('/api/cart', {
-        method: "POST",
-        body: JSON.stringify({ productId, quantity }),
-      });
-
+      const res = await apiFetch(url, options);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to add item");
-
+      if (!res.ok) throw new Error(data.message || fallbackMessage);
       setCartItems(getCartItems(data));
-      toast.success("Item added to cart");
+      return true;
     } catch (err) {
-      toast.error(err.message || "Failed to add item");
+      toast.error(err.message || fallbackMessage);
+      return false;
     }
   }, []);
 
-  // --- Remove from cart ---
-  const removeFromCart = useCallback(async (productId) => {
-    try {
-      const res = await apiFetch(`/api/cart/${productId}`, {
-        method: "DELETE",
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to remove item");
-
-      setCartItems(getCartItems(data));
-    } catch (err) {
-      toast.error(err.message || "Failed to remove item");
+  const addToCart = useCallback(async (productId, quantity = 1, { size, color } = {}) => {
+    if (!user) {
+      requireLogin('Please sign in to add items to your cart.');
+      return false;
     }
-  }, []);
+    const ok = await mutate('/api/cart', { method: 'POST', body: JSON.stringify({ productId, quantity, size, color }) }, 'Failed to add item');
+    if (ok) toast.success('Added to cart');
+    return ok;
+  }, [mutate, requireLogin, user]);
 
-  // --- Update quantity ---
-  const updateQuantity = useCallback(async (productId, quantity) => {
-    try {
-      const res = await apiFetch(`/api/cart/${productId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ quantity }),
-      });
+  const removeFromCart = useCallback((itemId) => (
+    mutate(`/api/cart/${itemId}`, { method: 'DELETE' }, 'Failed to remove item')
+  ), [mutate]);
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to update quantity");
+  const updateQuantity = useCallback((itemId, quantity) => (
+    mutate(`/api/cart/${itemId}`, { method: 'PATCH', body: JSON.stringify({ quantity }) }, 'Failed to update quantity')
+  ), [mutate]);
 
-      setCartItems(getCartItems(data));
-    } catch (err) {
-      toast.error(err.message || "Failed to update quantity");
-    }
-  }, []);
+  const clearCart = useCallback(() => (
+    mutate('/api/cart', { method: 'DELETE' }, 'Failed to clear cart')
+  ), [mutate]);
 
-  // --- Increment ---
-  const incrementItem = useCallback(async (productId) => {
-    try {
-      const res = await apiFetch(`/api/cart/${productId}/increment`, {
-        method: "PATCH",
-      });
+  const resetCart = useCallback(() => setCartItems([]), []);
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to increment");
+  const value = useMemo(() => {
+    const pricing = calculatePricing(cartItems);
+    return {
+      cartItems,
+      loading,
+      itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      pricing,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      resetCart,
+    };
+  }, [addToCart, cartItems, clearCart, loading, removeFromCart, resetCart, updateQuantity]);
 
-      setCartItems(getCartItems(data));
-    } catch (err) {
-      toast.error(err.message || "Failed to increment item");
-    }
-  }, []);
-
-  // --- Decrement ---
-  const decrementItem = useCallback(async (productId) => {
-    try {
-      const res = await apiFetch(`/api/cart/${productId}/decrement`, {
-        method: "PATCH",
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to decrement");
-
-      setCartItems(getCartItems(data));
-    } catch (err) {
-      toast.error(err.message || "Failed to decrement item");
-    }
-  }, []);
-
-  const value = useMemo(() => ({
-    cartItems,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    incrementItem,
-    decrementItem,
-    loading,
-  }), [addToCart, cartItems, decrementItem, incrementItem, loading, removeFromCart, updateQuantity]);
-
-  return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

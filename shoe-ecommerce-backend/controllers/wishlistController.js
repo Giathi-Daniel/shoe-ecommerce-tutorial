@@ -2,7 +2,7 @@ const Wishlist = require('../models/Wishlist')
 const Product = require('../models/Product')
 const mongoose = require('mongoose')
 
-const wishlistProductFields = 'name price mainImage image stock rating numReviews'
+const wishlistProductFields = 'name price compareAtPrice mainImage stock rating numReviews sizes colors'
 
 function isValidObjectId(id) {
     return mongoose.Types.ObjectId.isValid(id)

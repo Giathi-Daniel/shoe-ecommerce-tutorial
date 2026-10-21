@@ -1,19 +1,24 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import AuthFormInput from '../components/AuthFormInput';
-import AuthButton from '../components/AuthButton';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import apiFetch from '../utils/apiFetch.jsx';
+import AuthButton from '../components/AuthButton';
+import AuthFormInput from '../components/AuthFormInput';
+import AuthLayout from '../components/AuthLayout';
+import PasswordToggle from '../components/PasswordToggle';
 import { useAuth } from '../context/AuthContext';
+import usePageTitle from '../hooks/usePageTitle';
+import { apiJson } from '../utils/apiFetch.jsx';
 
 export default function Login() {
+  usePageTitle('Sign in');
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { afterLogin } = useAuth(); 
+  const location = useLocation();
+  const { afterLogin } = useAuth();
+  const redirectTo = location.state?.from || '/';
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,113 +27,62 @@ export default function Login() {
   };
 
   const validate = () => {
-    const newErrors = {};
-    if (!form.email) newErrors.email = 'Email is required';
-    else if (!/^\S+@\S+\.\S+$/.test(form.email)) newErrors.email = 'Invalid email format';
-
-    if (!form.password) newErrors.password = 'Password is required';
-    else if (form.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const next = {};
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) next.email = 'Enter a valid email address';
+    if (!form.password) next.password = 'Enter your password';
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-    setIsSubmitting(true);
+    setSubmitting(true);
     try {
-      const res = await apiFetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Invalid email or password');
-      }
-
+      const data = await apiJson('/api/auth/login', { method: 'POST', body: JSON.stringify(form) });
       await afterLogin(data.token);
-
-      toast.success('Logged in successfully!');
-      navigate('/');
+      toast.success(`Welcome back, ${data.user.name.split(' ')[0]}!`);
+      navigate(redirectTo, { replace: true });
     } catch (err) {
-      toast.error(err.message || 'Something went wrong');
+      setErrors({ form: err.message });
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-10 bg-gray-50">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white shadow-xl rounded-xl">
-        <h2 className="text-2xl font-bold text-center text-gray-800">Login</h2>
-
-        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-          {/* Email Field */}
-          <AuthFormInput
-            label="Email"
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            error={errors.email}
-          />
-
-          {/* Password Field with Toggle */}
-          <div>
-            <label htmlFor="password" className="block mb-1 text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                id="password"
-                value={form.password}
-                onChange={handleChange}
-                className={`w-full px-4 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${
-                  errors.password
-                    ? 'border-red-500 focus:ring-red-300'
-                    : 'border-gray-300 focus:ring-primary'
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute text-gray-500 -translate-y-1/2 top-1/2 right-3"
-                aria-label="Toggle password visibility"
-              >
-                {showPassword ? (
-                  <EyeSlashIcon className="w-5 h-5" />
-                ) : (
-                  <EyeIcon className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-            {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
-          </div>
-
-          {/* Submit Button */}
-          <AuthButton
-            text={isSubmitting ? 'Logging in...' : 'Sign In'}
-            disabled={isSubmitting}
-          />
-        </form>
-
-        <div className="flex justify-between text-sm text-gray-600">
-          <Link to="/forgot-password" className="hover:underline">
-            Forgot Password?
-          </Link>
-          <Link to="/signup" className="hover:underline">
-            Create Account
-          </Link>
+    <AuthLayout
+      title="Sign in"
+      footer={
+        <>
+          <p className="mb-2 text-[#565959]">New to ShoeStore?</p>
+          <Link to="/signup" state={location.state} className="btn-light w-full hover:text-[#0f1111]">Create your ShoeStore account</Link>
+        </>
+      }
+    >
+      {errors.form && (
+        <div role="alert" className="mb-4 rounded border border-[#c40000] p-3 text-sm">
+          <p className="font-bold text-[#c40000]">There was a problem</p>
+          <p>{errors.form}</p>
         </div>
-      </div>
-    </div>
+      )}
+
+      <form onSubmit={handleSubmit} noValidate>
+        <AuthFormInput label="Email" type="email" name="email" value={form.email} onChange={handleChange} error={errors.email} autoComplete="email" />
+        <AuthFormInput label="Password" type={showPassword ? 'text' : 'password'} name="password" value={form.password} onChange={handleChange} error={errors.password} autoComplete="current-password">
+          <PasswordToggle shown={showPassword} onToggle={() => setShowPassword((s) => !s)} />
+        </AuthFormInput>
+        <div className="-mt-2 mb-4 text-xs"><Link to="/forgot-password">Forgot your password?</Link></div>
+        <AuthButton text="Sign in" loading={submitting} />
+      </form>
+
+      <p className="mt-4 text-xs text-[#565959]">
+        By continuing, you agree to ShoeStore&apos;s <Link to="/help/terms">Conditions of Use</Link> and <Link to="/help/privacy">Privacy Notice</Link>.
+      </p>
+      <p className="mt-3 rounded bg-[#f0f2f2] p-2 text-xs text-[#565959]">
+        Demo account: <b>demo@shoestore.com</b> / <b>Demo@12345</b>
+      </p>
+    </AuthLayout>
   );
 }
