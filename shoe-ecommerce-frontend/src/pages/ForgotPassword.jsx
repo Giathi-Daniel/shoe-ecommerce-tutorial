@@ -1,81 +1,47 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import AuthFormInput from '../components/AuthFormInput';
 import AuthButton from '../components/AuthButton';
-import apiFetch from '../utils/apiFetch.jsx';
+import AuthFormInput from '../components/AuthFormInput';
+import AuthLayout from '../components/AuthLayout';
+import usePageTitle from '../hooks/usePageTitle';
+import { apiJson } from '../utils/apiFetch.jsx';
 
 export default function ForgotPassword() {
+  usePageTitle('Password assistance');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const validateEmail = (email) => /^\S+@\S+\.\S+$/.test(email);
-
-  const handleChange = (e) => {
-    const value = e.target.value;
-    setEmail(value);
-    if (error && validateEmail(value)) setError('');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
-    if (!email || !validateEmail(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Enter a valid email address');
 
     setLoading(true);
     try {
-      const res = await apiFetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Something went wrong');
-
-      toast.success('Check your inbox for the password reset link.');
-      setEmail('');
+      await apiJson('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+      setSent(true);
     } catch (err) {
-      toast.error(err.message || 'Something went wrong. Try again later.');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-10 bg-gray-50 animate-fade-in">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white shadow-xl rounded-xl">
-        <h2 className="text-2xl font-bold text-center text-gray-800">Forgot Password</h2>
-
-        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-          <AuthFormInput
-            label="Email"
-            type="email"
-            name="email"
-            value={email}
-            onChange={handleChange}
-            error={error}
-            placeholder="you@example.com"
-          />
-
-          <AuthButton
-            text={loading ? 'Sending...' : 'Send Reset Link'}
-            disabled={loading}
-          />
-        </form>
-
-        <div className="text-sm text-center text-gray-600">
-          Go back to{' '}
-          <Link to="/login" className="font-medium text-primary hover:underline">
-            Login
-          </Link>
+    <AuthLayout title="Password assistance" footer={<Link to="/login">Back to sign in</Link>}>
+      {sent ? (
+        <div role="status" className="space-y-2 text-sm">
+          <p className="font-bold text-[#007600]">Check your email</p>
+          <p>If an account exists for <b>{email}</b>, we&apos;ve sent a link to reset your password. It expires in 10 minutes.</p>
         </div>
-      </div>
-    </div>
+      ) : (
+        <form onSubmit={handleSubmit} noValidate>
+          <p className="mb-4 text-sm">Enter the email address associated with your account and we&apos;ll send you a reset link.</p>
+          <AuthFormInput label="Email" type="email" name="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} error={error} autoComplete="email" />
+          <AuthButton text="Send reset link" loading={loading} />
+        </form>
+      )}
+    </AuthLayout>
   );
 }

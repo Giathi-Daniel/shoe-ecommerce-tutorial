@@ -1,31 +1,33 @@
-import { Routes, Route } from 'react-router-dom';
+import { Suspense } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import routes from './routes';
+import ScrollToTop from './components/ScrollToTop';
+import { PageSpinner } from './components/Skeletons';
+import routes, { MINIMAL_LAYOUT_PATHS } from './routes';
 
 import 'react-toastify/dist/ReactToastify.css';
-import { ToastContainer } from 'react-toastify';
 
 function App() {
+  const { pathname } = useLocation();
+  const minimalLayout = MINIMAL_LAYOUT_PATHS.some((path) => pathname.startsWith(path));
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      <main className="flex-grow bg-gray-50">
-        <Routes>
-          {routes.map((route) => (
-            <Route key={route.path} path={route.path} element={route.element} />
-          ))}
-        </Routes>
+    <div className="flex min-h-screen flex-col">
+      <ScrollToTop />
+      {!minimalLayout && <Header />}
+      <main className={`flex-grow ${minimalLayout ? 'bg-white' : 'bg-[#eaeded]'}`}>
+        <Suspense fallback={<PageSpinner />}>
+          <Routes>
+            {routes.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
+          </Routes>
+        </Suspense>
       </main>
-      <Footer />
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        draggable
-      />
+      {!minimalLayout && <Footer />}
+      <ToastContainer position="top-center" autoClose={3000} newestOnTop pauseOnFocusLoss={false} />
     </div>
   );
 }

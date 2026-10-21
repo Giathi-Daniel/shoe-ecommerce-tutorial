@@ -19,6 +19,9 @@ const contentTypes = {
   '.js': 'text/javascript',
   '.json': 'application/json',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.webmanifest': 'application/manifest+json',
 };

@@ -1,29 +1,59 @@
-const { body, validationResult } = require('express-validator')
+const { body, validationResult } = require('express-validator');
 
-const validateAuth = [
-    body('email')
-        .trim()
-        .escape()
-        .normalizeEmail()
-        .isEmail().withMessage('Must be a valid email')
-        .matches(/@gmail\.com$/).withMessage('Only Gmail addresses allowed'),
+const handleValidation = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: errors.array()[0].msg, errors: errors.array() });
+  }
+  next();
+};
 
-    body('password')
-        .trim()
-        .isStrongPassword().withMessage('Password must be 8+ charaters, with symbols, numbers, uppercase, lowercase'),
-    
-    body('name')
-        .optional()
-        .trim()
-        .escape(),
+const email = body('email').trim().isEmail().withMessage('Must be a valid email').normalizeEmail();
 
-    (req, res, next) => {
-        const errors = validationResult(req)
-        if(!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() })
-        }
-        next()
-    }
+exports.validateRegister = [
+  body('name').trim().isLength({ min: 2, max: 60 }).withMessage('Name must be 2-60 characters'),
+  email,
+  body('password')
+    .isStrongPassword()
+    .withMessage('Password must be 8+ characters with uppercase, lowercase, number and symbol'),
+  handleValidation,
 ];
 
-module.exports = validateAuth;
+exports.validateLogin = [
+  email,
+  body('password').notEmpty().withMessage('Password is required'),
+  handleValidation,
+];
+
+exports.validateEmail = [email, handleValidation];
+
+exports.validatePasswordChange = [
+  body('currentPassword').notEmpty().withMessage('Current password is required'),
+  body('newPassword')
+    .isStrongPassword()
+    .withMessage('Password must be 8+ characters with uppercase, lowercase, number and symbol'),
+  handleValidation,
+];
+
+exports.validateReset = [
+  body('password')
+    .isStrongPassword()
+    .withMessage('Password must be 8+ characters with uppercase, lowercase, number and symbol'),
+  handleValidation,
+];
+
+exports.validateReview = [
+  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
+  body('comment').trim().isLength({ min: 3, max: 2000 }).withMessage('Review must be 3-2000 characters'),
+  body('title').optional().trim().isLength({ max: 120 }).withMessage('Title is too long'),
+  handleValidation,
+];
+
+exports.validateAddress = [
+  body('fullName').trim().isLength({ min: 2 }).withMessage('Full name is required'),
+  body('address').trim().isLength({ min: 5 }).withMessage('Address must be at least 5 characters'),
+  body('city').trim().notEmpty().withMessage('City is required'),
+  body('postalCode').trim().notEmpty().withMessage('Postal code is required'),
+  body('country').trim().notEmpty().withMessage('Country is required'),
+  handleValidation,
+];

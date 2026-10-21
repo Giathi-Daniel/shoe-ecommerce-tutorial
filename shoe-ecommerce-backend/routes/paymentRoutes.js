@@ -1,11 +1,15 @@
-const express = require('express')
-const  { createCheckoutSession, stripeWebhook } = require('../controllers/paymentController')
-const protect = require('../middleware/protect')
+const express = require('express');
+const payment = require('../controllers/paymentController');
+const protect = require('../middleware/protect');
 
-const router = express.Router()
+const router = express.Router();
 
-// webhooks uses raw body
-router.post('/webhook', express.raw({ type: 'application/json' }), stripeWebhook)
-router.post('/create-checkout-session', protect, createCheckoutSession)
+router.post('/stripe/webhook', express.raw({ type: 'application/json' }), payment.stripeWebhook);
 
-module.exports = router
+router.use(express.json(), protect);
+router.post('/stripe/session', payment.createStripeSession);
+router.post('/stripe/confirm', payment.confirmStripePayment);
+router.post('/paypal/create', payment.createPayPalOrder);
+router.post('/paypal/capture', payment.capturePayPalOrder);
+
+module.exports = router;

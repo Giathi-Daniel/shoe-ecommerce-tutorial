@@ -1,137 +1,143 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
-import apiFetch from '../utils/apiFetch.jsx';
+import AddressForm from '../components/AddressForm';
+import AuthFormInput from '../components/AuthFormInput';
+import Breadcrumbs from '../components/Breadcrumbs';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useAuth } from '../context/AuthContext';
+import usePageTitle from '../hooks/usePageTitle';
+import { apiJson } from '../utils/apiFetch.jsx';
+
+const EMPTY_PASSWORDS = { currentPassword: '', newPassword: '', confirm: '' };
+
+function Section({ id, title, children }) {
+  return (
+    <section id={id} className="card scroll-mt-40 p-5">
+      <h2 className="mb-3 text-xl font-bold">{title}</h2>
+      {children}
+    </section>
+  );
+}
 
 export default function Profile() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  usePageTitle('Login & Security');
+  const { user, setUser, logout } = useAuth();
+  const { hash } = useLocation();
+
+  const [name, setName] = useState(user.name);
+  const [address, setAddress] = useState({ fullName: user.name, phone: '', address: '', city: '', postalCode: '', country: '', ...user.address });
+  const [passwords, setPasswords] = useState(EMPTY_PASSWORDS);
+  const [passwordError, setPasswordError] = useState('');
+  const [saving, setSaving] = useState('');
   const [deleteInput, setDeleteInput] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
-  }, [user, navigate]);
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth' });
+  }, [hash]);
 
-  const handleDeleteAccount = () => {
-    if (deleteInput !== 'delete me') {
-      toast.error('Please type "delete me" to confirm account deletion.');
-      return;
-    }
-    setShowConfirmModal(true);
-  };
-
-  const confirmDeleteAccount = async () => {
-    setShowConfirmModal(false);
-    setIsDeleting(true);
-
+  const save = async (key, payload, successMessage) => {
+    setSaving(key);
     try {
-      const res = await apiFetch('/api/auth/delete-account', {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Failed to delete account');
-      }
-
-      toast.success('Your account has been deleted.');
-      setDeleteInput('')
-      logout();
-      navigate('/');
+      setUser(await apiJson('/api/auth/profile', { method: 'PUT', body: JSON.stringify(payload) }));
+      toast.success(successMessage);
     } catch (err) {
       toast.error(err.message);
     } finally {
-      setIsDeleting(false);
+      setSaving('');
     }
   };
 
+  const changePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    if (passwords.newPassword !== passwords.confirm) return setPasswordError('New passwords do not match');
+
+    setSaving('password');
+    try {
+      await apiJson('/api/auth/change-password', {
+        method: 'PUT',
+        body: JSON.stringify({ currentPassword: passwords.currentPassword, newPassword: passwords.newPassword }),
+      });
+      setPasswords(EMPTY_PASSWORDS);
+      toast.success('Password updated');
+    } catch (err) {
+      setPasswordError(err.message);
+    } finally {
+      setSaving('');
+    }
+  };
+
+  const deleteAccount = async () => {
+    setSaving('delete');
+    try {
+      await apiJson('/api/auth/delete-account', { method: 'DELETE' });
+      toast.success('Your account has been deleted.');
+      await logout();
+    } catch (err) {
+      toast.error(err.message);
+      setSaving('');
+      setConfirmDelete(false);
+    }
+  };
+
+  const onPasswordChange = (e) => setPasswords((p) => ({ ...p, [e.target.name]: e.target.value }));
+
   return (
-    <div className="max-w-md p-8 mx-auto mt-20 bg-white rounded shadow">
-      <h2 className="mb-6 text-2xl font-bold text-center">Your Profile</h2>
-      <div className="mb-4">
-        <label className="block mb-1 font-semibold">Name</label>
-        <input
-          type="text"
-          value={user.name}
-          readOnly
-          className="w-full p-2 bg-gray-100 border rounded cursor-not-allowed"
-        />
-      </div>
-      <div className="mb-4">
-        <label className="block mb-1 font-semibold">Email</label>
-        <input
-          type="email"
-          value={user.email}
-          readOnly
-          className="w-full p-2 bg-gray-100 border rounded cursor-not-allowed"
-        />
-      </div>
-      <div className="mb-6">
-        <label className="block mb-1 font-semibold">Password</label>
-        <input
-          type="password"
-          value="********"
-          readOnly
-          className="w-full p-2 bg-gray-100 border rounded cursor-not-allowed"
-        />
-      </div>
+    <div className="mx-auto max-w-[700px] space-y-4 px-3 py-4 sm:px-4">
+      <Breadcrumbs items={[{ label: 'Your Account', to: '/account' }, { label: 'Login & security' }]} />
+      <h1 className="text-[28px] font-medium">Login &amp; security</h1>
 
-      <hr className="mb-6" />
+      <Section id="profile" title="Name & email">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            save('name', { name }, 'Name updated');
+          }}
+        >
+          <AuthFormInput label="Name" name="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+          <AuthFormInput label="Email" name="email" type="email" value={user.email} onChange={() => {}} required={false} hint="Your email address can't be changed." />
+          <button type="submit" disabled={saving === 'name' || name.trim() === user.name} className="btn-cta">Save changes</button>
+        </form>
+      </Section>
 
-      <div className="mb-4">
-        <label htmlFor="deleteInput" className="block mb-1 font-semibold text-red-600">
-          Type "delete me" to confirm account deletion
-        </label>
-        <input
-          id="deleteInput"
-          type="text"
-          value={deleteInput}
-          onChange={(e) => setDeleteInput(e.target.value)}
-          className="w-full p-2 border rounded"
-          placeholder='Type "delete me"'
-        />
-      </div>
+      <Section id="address" title="Default delivery address">
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save('address', { address }, 'Address saved');
+          }}
+        >
+          <AddressForm value={address} onChange={setAddress} idPrefix="profile" />
+          <button type="submit" disabled={saving === 'address'} className="btn-cta">Save address</button>
+        </form>
+      </Section>
 
-      <button
-        disabled={isDeleting}
-        onClick={handleDeleteAccount}
-        className="w-full px-4 py-2 font-semibold text-white bg-red-600 rounded hover:bg-red-700 disabled:opacity-50"
-      >
-        {isDeleting ? 'Deleting...' : 'Delete Account'}
-      </button>
+      <Section id="security" title="Change password">
+        <form onSubmit={changePassword}>
+          <AuthFormInput label="Current password" name="currentPassword" type="password" value={passwords.currentPassword} onChange={onPasswordChange} autoComplete="current-password" />
+          <AuthFormInput label="New password" name="newPassword" type="password" value={passwords.newPassword} onChange={onPasswordChange} autoComplete="new-password" hint="8+ characters with uppercase, lowercase, number and symbol." />
+          <AuthFormInput label="Confirm new password" name="confirm" type="password" value={passwords.confirm} onChange={onPasswordChange} autoComplete="new-password" error={passwordError} />
+          <button type="submit" disabled={saving === 'password'} className="btn-cta">Update password</button>
+        </form>
+      </Section>
 
-      {showConfirmModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-sm p-6 bg-white rounded shadow-lg">
-            <p className="mb-4 font-semibold text-center text-gray-800">
-              Deleting your account is irreversible. Are you sure?
-            </p>
-            <div className="flex justify-between">
-              <button
-                onClick={() => {
-                  setShowConfirmModal(false);
-                  setDeleteInput('');
-                }}
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={confirmDeleteAccount}
-                className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
+      <Section id="delete" title="Delete account">
+        <p className="mb-3 text-sm text-[#565959]">This permanently removes your account, cart, wish list and order history.</p>
+        <label htmlFor="delete-confirm" className="mb-1 block text-sm">Type <b>delete me</b> to confirm</label>
+        <div className="flex flex-wrap gap-2">
+          <input id="delete-confirm" value={deleteInput} onChange={(e) => setDeleteInput(e.target.value)} className="field max-w-xs" />
+          <button type="button" disabled={deleteInput !== 'delete me'} onClick={() => setConfirmDelete(true)} className="btn border-[#b12704] bg-[#cc0c39] text-white hover:bg-[#b12704] hover:text-white">
+            Delete my account
+          </button>
         </div>
-      )}
+      </Section>
+
+      <ConfirmDialog open={confirmDelete} title="Delete your account?" confirmLabel="Delete account" danger busy={saving === 'delete'} onClose={() => setConfirmDelete(false)} onConfirm={deleteAccount}>
+        This action cannot be undone.
+      </ConfirmDialog>
     </div>
   );
 }

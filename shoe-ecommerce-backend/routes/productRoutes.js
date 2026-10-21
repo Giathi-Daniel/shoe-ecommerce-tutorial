@@ -1,17 +1,21 @@
-const express = require('express')
-const router = express.Router()
-const { createProduct, getProducts, getSingleProduct, updateProduct, deleteProduct } = require('../controllers/productController')
-const protect = require('../middleware/protect')
-const adminOnly = require('../middleware/adminOnly')
-const validateProduct = require('../middleware/validateProduct')
+const express = require('express');
+const router = express.Router();
+const product = require('../controllers/productController');
+const protect = require('../middleware/protect');
+const adminOnly = require('../middleware/adminOnly');
+const validateProduct = require('../middleware/validateProduct');
+const { validateReview } = require('../middleware/validateInput');
 
-// public
-router.get('/', getProducts)
-router.get('/:id', getSingleProduct)
+router.get('/', product.getProducts);
+router.get('/meta', product.getProductMeta);
+router.get('/:id', product.getSingleProduct);
+router.get('/:id/related', product.getRelatedProducts);
 
-// admin
-router.post('/', protect, adminOnly, validateProduct, createProduct)
-router.put('/:id', protect, adminOnly, validateProduct, updateProduct)
-router.delete('/:id', protect, adminOnly, deleteProduct)
+router.post('/:id/reviews', protect, validateReview, product.createReview);
+router.delete('/:id/reviews/:reviewId', protect, product.deleteReview);
 
-module.exports = router
+router.post('/', protect, adminOnly, validateProduct, product.createProduct);
+router.put('/:id', protect, adminOnly, product.updateProduct);
+router.delete('/:id', protect, adminOnly, product.deleteProduct);
+
+module.exports = router;
