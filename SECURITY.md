@@ -1,63 +1,37 @@
 # Security
 
-How ShoeStore protects accounts, orders and the API, what is deliberately left to the hosting layer, and what to do before launch.
+## Reporting a vulnerability
+
+Please report it privately through this repository's **Security** tab ("Report a vulnerability") instead of opening a public issue.
 
 ## What is protected
 
-| Risk | Defence |
-| --- | --- |
-| Bots registering, guessing passwords or mailing reset links | **Google reCAPTCHA v3** is verified on the server for register, login and forgot-password (score and action checked). Production **fails closed**: no secret or an unreachable Google means the request is refused. |
-| Brute force and credential stuffing | Per-IP limits plus a per-account limit (so spreading attempts across many IPs still hits a ceiling), a stricter limit on password-reset email, and a 10 minute lockout after 5 wrong passwords. |
-| Account enumeration | Unknown email, wrong password and locked account all return the **same message**, and a dummy password hash is checked for unknown emails so response time does not give them away. Password reset always answers the same way. |
-| Stolen or stale sessions | Tokens carry a version number. **Logout, password change and password reset revoke every existing token immediately.** The user's role is read from the database on each request, so demoting an admin takes effect at once. Tokens last 1 day by default. |
-| NoSQL injection | Any request containing MongoDB operators (`$gt`, `$ne`, dotted keys) is rejected, inputs are validated, and ids are checked before queries. |
-| Mass assignment | Admin product create and update only accept an explicit list of fields. Ratings, review counts and reviews cannot be set from a request. |
-| Dangerous image URLs | Product images must be `https://` URLs or `/paths`, so `javascript:` and `data:` URLs are refused. |
-| Destructive account actions | Deleting an account requires the current password. |
-| Cross-origin abuse | CORS only allows `CLIENT_URL` in production (localhost is allowed in development only) and blocked origins get a clean `403`. |
-| Oversized or malformed requests | JSON bodies are limited to 100 KB, passwords to 128 characters, and bad JSON returns `400` without echoing input. |
-| Sensitive data in logs | Email addresses are masked, and password-reset emails are never written to production logs. |
-| Open redirects | Post-login redirects are restricted to same-site paths. |
-| Browser attacks | The site server sends a strict CSP (scripts only from itself and reCAPTCHA), HSTS, no framing and no MIME sniffing. The API sends Helmet defaults with a deny-all CSP. |
-| Server crashes | A malformed URL can no longer crash the web server, stack traces are hidden in production and only GET and HEAD are served. |
-| Weak configuration | In production the API refuses to start with a `JWT_SECRET` shorter than 32 characters, and the seed script refuses to run (it creates known demo logins). |
+- **Bots and brute force:** reCAPTCHA v3 on register, login and forgot-password, checked on the server and failing closed in production. Per-IP and per-account rate limits, and a 10 minute lockout after 5 wrong passwords.
+- **Sessions:** logout and password changes revoke all existing tokens immediately, and roles are read from the database on every request.
+- **Accounts:** login failures give the same message whether or not the email exists. Deleting an account requires the password.
+- **Input:** MongoDB operator injection is rejected, admin product edits accept only an allowed list of fields, and image URLs must be `https://` or a local `/path`.
+- **Platform:** strict CORS, CSP, HSTS and other headers, masked emails in logs, and startup checks for weak secrets.
 
-## Set up reCAPTCHA
+## reCAPTCHA setup
 
-1. Create a **v3** key pair at <https://www.google.com/recaptcha/admin/create> and add your production domain.
-2. API: set `RECAPTCHA_SECRET_KEY` (and optionally `RECAPTCHA_MIN_SCORE`, default `0.5`).
-3. Site: set `VITE_RECAPTCHA_SITE_KEY` **at build time**, then rebuild.
-4. Watch the score distribution in the reCAPTCHA console after launch and tune `RECAPTCHA_MIN_SCORE` if real customers are rejected.
+1. Create a **v3** key pair at <https://www.google.com/recaptcha/admin/create> for your domain.
+2. API: set `RECAPTCHA_SECRET_KEY`. Site: set `VITE_RECAPTCHA_SITE_KEY` at build time.
+3. Locally, with no keys, the check is skipped. Production builds never skip it.
 
-Locally, with no keys, the check is skipped so development works. Production builds never skip it.
+## DDoS
 
-## DDoS and traffic floods
-
-Application code cannot stop a large DDoS: protection has to sit in front of the app.
-
-- Serve the site through a CDN or proxy (Cloudflare, Vercel, AWS CloudFront). Static pages and images are then absorbed at the edge.
-- Enable the provider's **WAF and bot protection**, and add a rate rule for `/api/auth/*`.
-- The in-app rate limiters keep counters in memory, so with several API instances each counts separately. Treat them as a second line of defence, and use a shared store (for example Redis) if you scale out.
-- `trust proxy` is set to `1`, so the API sees the real client IP behind one proxy. Change it if you run behind more.
+Application code cannot stop a large DDoS. Put a CDN or WAF (Cloudflare, Vercel, CloudFront) in front of the site and API and add a rate rule for `/api/auth/*`. The built-in limiters are per server instance, so use a shared store such as Redis if you run several.
 
 ## Known limits
 
-- **Login token storage.** The token lives in browser local storage so the site and API can be hosted on different domains. A script-injection bug would be able to read it. The strict CSP, React's output escaping, 1-day expiry and instant revocation on logout and password change reduce that risk. A same-site `HttpOnly` cookie is the stronger design if you host both under one domain.
-- **Registration reveals existing emails** ("already exists"). This is the usual trade-off for usable sign-up, and it sits behind reCAPTCHA and rate limits.
-- Product images in the seed data are served by the storefront. Admin-added images must be hosted somewhere you trust.
+- The login token is kept in browser storage so the site and API can live on different domains. A same-site `HttpOnly` cookie is stronger if you host both under one domain.
+- Registration reveals when an email already exists. It sits behind reCAPTCHA and rate limits.
 
-## Launch checklist
+## Before going live
 
-- [ ] `NODE_ENV=production` on the API
-- [ ] `JWT_SECRET` is random and at least 32 characters (`node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`)
-- [ ] `CLIENT_URL` is the exact site origin (comma separate several)
-- [ ] reCAPTCHA keys set on both the API and the site build
-- [ ] `EMAIL_USER` and `EMAIL_PASS` set so password-reset emails are delivered
-- [ ] Stripe and PayPal keys set, and the Stripe webhook secret configured
-- [ ] Do **not** run `npm run seed` in production, and delete or change the demo accounts if it was ever run
-- [ ] CDN or WAF in front of the site and API, with rate rules on `/api/auth/*`
-- [ ] Run `npm audit --omit=dev` in both apps before each release
-
-## Reporting a problem
-
-If you find a vulnerability, please contact the maintainer privately instead of opening a public issue.
+- [ ] `NODE_ENV=production` and a random `JWT_SECRET` of at least 32 characters
+- [ ] `CLIENT_URL` set to the exact site origin
+- [ ] reCAPTCHA keys set on the API and the site build
+- [ ] Email, Stripe and PayPal keys configured
+- [ ] Never run `npm run seed` in production, and remove the demo accounts if it ever ran
+- [ ] CDN or WAF in front, and `npm audit --omit=dev` clean in both apps
