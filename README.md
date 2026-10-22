@@ -76,8 +76,6 @@ For MongoDB options, every environment variable, Stripe/PayPal/email setup, prod
 - NoSQL-injection and mass-assignment protection, validated image URLs, password required to delete an account
 - Strict CORS, CSP, HSTS and other headers, masked logs, startup checks for weak secrets
 
-Details, setup steps and a launch checklist are in [SECURITY.md](SECURITY.md).
-
 ## API overview
 
 | Area | Endpoints |

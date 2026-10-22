@@ -114,8 +114,6 @@ Restart the API after changing `.env`.
 
 ## 7. Production build
 
-Before going live, work through the checklist in [SECURITY.md](../SECURITY.md).
-
 
 ```bash
 cd shoe-ecommerce-frontend
