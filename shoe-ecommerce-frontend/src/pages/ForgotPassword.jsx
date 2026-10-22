@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import AuthButton from '../components/AuthButton';
 import AuthFormInput from '../components/AuthFormInput';
 import AuthLayout from '../components/AuthLayout';
+import RecaptchaNotice from '../components/RecaptchaNotice';
 import usePageTitle from '../hooks/usePageTitle';
 import { apiJson } from '../utils/apiFetch.jsx';
+import { getRecaptchaToken } from '../utils/recaptcha';
 
 export default function ForgotPassword() {
   usePageTitle('Password assistance');
@@ -19,7 +21,8 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      await apiJson('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+      const recaptchaToken = await getRecaptchaToken('forgot_password');
+      await apiJson('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email, recaptchaToken }) });
       setSent(true);
     } catch (err) {
       setError(err.message);
@@ -40,6 +43,7 @@ export default function ForgotPassword() {
           <p className="mb-4 text-sm">Enter the email address associated with your account and we&apos;ll send you a reset link.</p>
           <AuthFormInput label="Email" type="email" name="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} error={error} autoComplete="email" />
           <AuthButton text="Send reset link" loading={loading} />
+          <RecaptchaNotice />
         </form>
       )}
     </AuthLayout>

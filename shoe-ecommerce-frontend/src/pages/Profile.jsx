@@ -7,7 +7,7 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../context/AuthContext';
 import usePageTitle from '../hooks/usePageTitle';
-import { apiJson } from '../utils/apiFetch.jsx';
+import { apiJson, setAuthToken } from '../utils/apiFetch.jsx';
 
 const EMPTY_PASSWORDS = { currentPassword: '', newPassword: '', confirm: '' };
 
@@ -31,6 +31,7 @@ export default function Profile() {
   const [passwordError, setPasswordError] = useState('');
   const [saving, setSaving] = useState('');
   const [deleteInput, setDeleteInput] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -56,12 +57,13 @@ export default function Profile() {
 
     setSaving('password');
     try {
-      await apiJson('/api/auth/change-password', {
+      const data = await apiJson('/api/auth/change-password', {
         method: 'PUT',
         body: JSON.stringify({ currentPassword: passwords.currentPassword, newPassword: passwords.newPassword }),
       });
+      if (data.token) setAuthToken(data.token);
       setPasswords(EMPTY_PASSWORDS);
-      toast.success('Password updated');
+      toast.success('Password updated. Other devices have been signed out.');
     } catch (err) {
       setPasswordError(err.message);
     } finally {
@@ -72,7 +74,7 @@ export default function Profile() {
   const deleteAccount = async () => {
     setSaving('delete');
     try {
-      await apiJson('/api/auth/delete-account', { method: 'DELETE' });
+      await apiJson('/api/auth/delete-account', { method: 'DELETE', body: JSON.stringify({ password: deletePassword }) });
       toast.success('Your account has been deleted.');
       await logout();
     } catch (err) {
@@ -129,7 +131,16 @@ export default function Profile() {
         <label htmlFor="delete-confirm" className="mb-1 block text-sm">Type <b>delete me</b> to confirm</label>
         <div className="flex flex-wrap gap-2">
           <input id="delete-confirm" value={deleteInput} onChange={(e) => setDeleteInput(e.target.value)} className="field max-w-xs" />
-          <button type="button" disabled={deleteInput !== 'delete me'} onClick={() => setConfirmDelete(true)} className="btn border-[#b12704] bg-[#cc0c39] text-white hover:bg-[#b12704] hover:text-white">
+          <input
+            type="password"
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+            placeholder="Your password"
+            aria-label="Your password to confirm"
+            autoComplete="current-password"
+            className="field max-w-xs"
+          />
+          <button type="button" disabled={deleteInput !== 'delete me' || !deletePassword} onClick={() => setConfirmDelete(true)} className="btn border-[#b12704] bg-[#cc0c39] text-white hover:bg-[#b12704] hover:text-white">
             Delete my account
           </button>
         </div>

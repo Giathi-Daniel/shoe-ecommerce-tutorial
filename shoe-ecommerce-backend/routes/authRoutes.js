@@ -8,14 +8,15 @@ const {
   validatePasswordChange,
   validateReset,
 } = require('../middleware/validateInput');
-const { loginLimiter } = require('../middleware/rateLimiter');
+const { loginLimiter, accountLimiter, resetLimiter, resetAccountLimiter } = require('../middleware/rateLimiter');
+const verifyRecaptcha = require('../middleware/recaptcha');
 const adminOnly = require('../middleware/adminOnly');
 const protect = require('../middleware/protect');
 
-router.post('/register', validateRegister, auth.register);
-router.post('/login', loginLimiter, validateLogin, auth.login);
-router.post('/logout', auth.logout);
-router.post('/forgot-password', loginLimiter, validateEmail, auth.forgotPassword);
+router.post('/register', loginLimiter, verifyRecaptcha('register'), validateRegister, auth.register);
+router.post('/login', loginLimiter, verifyRecaptcha('login'), validateLogin, accountLimiter, auth.login);
+router.post('/logout', protect, auth.logout);
+router.post('/forgot-password', resetLimiter, verifyRecaptcha('forgot_password'), validateEmail, resetAccountLimiter, auth.forgotPassword);
 router.put('/reset/:token', validateReset, auth.resetPassword);
 
 router.get('/profile', protect, auth.getProfile);

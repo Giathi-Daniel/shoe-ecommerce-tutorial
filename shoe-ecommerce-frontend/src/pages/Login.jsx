@@ -5,9 +5,12 @@ import AuthButton from '../components/AuthButton';
 import AuthFormInput from '../components/AuthFormInput';
 import AuthLayout from '../components/AuthLayout';
 import PasswordToggle from '../components/PasswordToggle';
+import RecaptchaNotice from '../components/RecaptchaNotice';
 import { useAuth } from '../context/AuthContext';
 import usePageTitle from '../hooks/usePageTitle';
 import { apiJson } from '../utils/apiFetch.jsx';
+import { getRecaptchaToken } from '../utils/recaptcha';
+import { safeRedirect } from '../utils/safeRedirect';
 
 export default function Login() {
   usePageTitle('Sign in');
@@ -18,7 +21,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { afterLogin } = useAuth();
-  const redirectTo = location.state?.from || '/';
+  const redirectTo = safeRedirect(location.state?.from);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,7 +43,8 @@ export default function Login() {
 
     setSubmitting(true);
     try {
-      const data = await apiJson('/api/auth/login', { method: 'POST', body: JSON.stringify(form) });
+      const recaptchaToken = await getRecaptchaToken('login');
+      const data = await apiJson('/api/auth/login', { method: 'POST', body: JSON.stringify({ ...form, recaptchaToken }) });
       await afterLogin(data.token);
       toast.success(`Welcome back, ${data.user.name.split(' ')[0]}!`);
       navigate(redirectTo, { replace: true });
@@ -80,9 +84,12 @@ export default function Login() {
       <p className="mt-4 text-xs text-[#565959]">
         By continuing, you agree to ShoeStore&apos;s <Link to="/help/terms">Conditions of Use</Link> and <Link to="/help/privacy">Privacy Notice</Link>.
       </p>
-      <p className="mt-3 rounded bg-[#f0f2f2] p-2 text-xs text-[#565959]">
-        Demo account: <b>demo@shoestore.com</b> / <b>Demo@12345</b>
-      </p>
+      {import.meta.env.DEV && (
+        <p className="mt-3 rounded bg-[#f0f2f2] p-2 text-xs text-[#565959]">
+          Local demo account: <b>demo@shoestore.com</b> / <b>Demo@12345</b>
+        </p>
+      )}
+      <RecaptchaNotice />
     </AuthLayout>
   );
 }

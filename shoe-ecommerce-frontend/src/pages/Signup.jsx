@@ -5,9 +5,12 @@ import AuthButton from '../components/AuthButton';
 import AuthFormInput from '../components/AuthFormInput';
 import AuthLayout from '../components/AuthLayout';
 import PasswordToggle from '../components/PasswordToggle';
+import RecaptchaNotice from '../components/RecaptchaNotice';
 import { useAuth } from '../context/AuthContext';
 import usePageTitle from '../hooks/usePageTitle';
 import { apiJson } from '../utils/apiFetch.jsx';
+import { getRecaptchaToken } from '../utils/recaptcha';
+import { safeRedirect } from '../utils/safeRedirect';
 import { PASSWORD_RULES } from '../utils/passwordRules.js';
 
 export default function Signup() {
@@ -42,13 +45,14 @@ export default function Signup() {
 
     setSubmitting(true);
     try {
+      const recaptchaToken = await getRecaptchaToken('register');
       const data = await apiJson('/api/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ name: form.name.trim(), email: form.email, password: form.password }),
+        body: JSON.stringify({ name: form.name.trim(), email: form.email, password: form.password, recaptchaToken }),
       });
       await afterLogin(data.token);
       toast.success('Welcome to ShoeStore!');
-      navigate(location.state?.from || '/', { replace: true });
+      navigate(safeRedirect(location.state?.from), { replace: true });
     } catch (err) {
       setErrors({ form: err.message });
     } finally {
@@ -90,6 +94,7 @@ export default function Signup() {
       <p className="mt-4 text-xs text-[#565959]">
         By creating an account, you agree to ShoeStore&apos;s <Link to="/help/terms">Conditions of Use</Link> and <Link to="/help/privacy">Privacy Notice</Link>.
       </p>
+      <RecaptchaNotice />
     </AuthLayout>
   );
 }

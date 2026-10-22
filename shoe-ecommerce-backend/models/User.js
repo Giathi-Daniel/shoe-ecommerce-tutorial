@@ -31,6 +31,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: [true, 'Password is required'], minlength: 8, select: false },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     address: { type: addressSchema, default: () => ({}) },
+    tokenVersion: { type: Number, default: 0 },
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
     passwordResetToken: String,

@@ -68,6 +68,16 @@ Sign in with `demo@shoestore.com` / `Demo@12345` (customer) or `admin@shoestore.
 
 For MongoDB options, every environment variable, Stripe/PayPal/email setup, production builds and troubleshooting, see **[docs/running-the-project.md](docs/running-the-project.md)**.
 
+## Security
+
+- reCAPTCHA v3 on register, login and forgot-password, verified server-side and failing closed in production
+- Per-IP and per-account rate limits, account lockout, identical responses for unknown and known accounts
+- Tokens revoked instantly on logout and password change; roles read from the database on every request
+- NoSQL-injection and mass-assignment protection, validated image URLs, password required to delete an account
+- Strict CORS, CSP, HSTS and other headers, masked logs, startup checks for weak secrets
+
+Details, setup steps and a launch checklist are in [SECURITY.md](SECURITY.md).
+
 ## API overview
 
 | Area | Endpoints |

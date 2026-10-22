@@ -5,17 +5,18 @@ const protect = require('../middleware/protect');
 const adminOnly = require('../middleware/adminOnly');
 const validateProduct = require('../middleware/validateProduct');
 const { validateReview } = require('../middleware/validateInput');
+const { writeLimiter } = require('../middleware/rateLimiter');
 
 router.get('/', product.getProducts);
 router.get('/meta', product.getProductMeta);
 router.get('/:id', product.getSingleProduct);
 router.get('/:id/related', product.getRelatedProducts);
 
-router.post('/:id/reviews', protect, validateReview, product.createReview);
+router.post('/:id/reviews', protect, writeLimiter, validateReview, product.createReview);
 router.delete('/:id/reviews/:reviewId', protect, product.deleteReview);
 
 router.post('/', protect, adminOnly, validateProduct, product.createProduct);
-router.put('/:id', protect, adminOnly, product.updateProduct);
+router.put('/:id', protect, adminOnly, validateProduct.update, product.updateProduct);
 router.delete('/:id', protect, adminOnly, product.deleteProduct);
 
 module.exports = router;

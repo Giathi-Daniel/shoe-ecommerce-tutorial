@@ -10,15 +10,29 @@ dotenv.config();
 
 const errorHandler = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
+const sanitizeRequest = require('./middleware/sanitizeRequest');
 const logger = require('./utils/logger');
 
+const production = process.env.NODE_ENV === 'production';
+
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  const message = 'JWT_SECRET must be set to a random string of at least 32 characters';
+  if (production) {
+    console.error(message);
+    logger.error(message);
+    process.exit(1);
+  }
+  logger.warn(`${message} (allowed in development only)`);
+}
+
 const app = express();
+app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
+// Localhost origins are only trusted outside production
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+  ...(production ? [] : ['http://localhost:3000', 'http://localhost:5173']),
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map((o) => o.trim().replace(/\/$/, '')) : []),
 ];
 
 app.use(
@@ -29,7 +43,16 @@ app.use(
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
 );
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: { directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } },
+    hsts: { maxAge: 63072000, includeSubDomains: true, preload: true },
+  })
+);
+
+// Rate limit everything under /api, including the payment webhook router below
+app.use('/api', apiLimiter);
 
 app.use(
   morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'tiny', {
@@ -40,9 +63,9 @@ app.use(
 // Stripe webhooks need the raw body, so the payment router parses JSON itself
 app.use('/api/payments', require('./routes/paymentRoutes'));
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '100kb' }));
 app.use(hpp());
-app.use('/api', apiLimiter);
+app.use(sanitizeRequest);
 
 app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime() }));
 

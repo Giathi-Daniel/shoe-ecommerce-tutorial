@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Cart = require('../models/Cart');
 const Order = require('../models/Order');
@@ -7,6 +8,13 @@ const generateToken = require('../utils/generateToken');
 const { handleFailedLogin, resetLoginAttempts } = require('../utils/loginAttempts');
 const sendEmail = require('../utils/sendEmail');
 const logger = require('../utils/logger');
+const { maskEmail } = require('../utils/mask');
+
+// Same message for unknown email, wrong password and locked account, so responses never reveal which accounts exist.
+const LOGIN_FAILED =
+  'Invalid credentials. After 5 failed attempts an account is locked for 10 minutes.';
+// Compared against when the email is unknown so response time does not reveal it either.
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 12);
 
 const serializeUser = (user) => ({
   id: user._id,
@@ -44,21 +52,20 @@ exports.login = async (req, res, next) => {
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
-      logger.warn(`Login failed: no user for ${email}`);
-      return res.status(401).json({ message: 'Invalid credentials' });
+      await bcrypt.compare(String(password), DUMMY_HASH);
+      logger.warn(`Login failed: unknown account ${maskEmail(email)}`);
+      return res.status(401).json({ message: LOGIN_FAILED });
     }
 
     if (user.isLocked) {
-      const waitMinutes = Math.ceil((user.lockUntil - Date.now()) / 60000);
-      return res.status(423).json({
-        message: `Account locked due to multiple failed attempts. Try again in ${waitMinutes} minute(s).`,
-      });
+      logger.warn(`Login attempt on locked account ${maskEmail(email)}`);
+      return res.status(401).json({ message: LOGIN_FAILED });
     }
 
     if (!(await user.matchPassword(password))) {
-      logger.warn(`Invalid password for ${email}`);
+      logger.warn(`Login failed: wrong password for ${maskEmail(email)}`);
       await handleFailedLogin(user);
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: LOGIN_FAILED });
     }
 
     await resetLoginAttempts(user);
@@ -73,8 +80,14 @@ exports.login = async (req, res, next) => {
 };
 
 // POST /api/auth/logout
-exports.logout = (req, res) => {
-  res.status(200).json({ message: 'Logged out' });
+exports.logout = async (req, res, next) => {
+  try {
+    // Bumping tokenVersion invalidates this token (and any other) immediately
+    await User.updateOne({ _id: req.user.id }, { $inc: { tokenVersion: 1 } });
+    res.status(200).json({ message: 'Logged out' });
+  } catch (err) {
+    next(err);
+  }
 };
 
 // GET /api/auth/profile
@@ -95,12 +108,21 @@ exports.updateProfile = async (req, res, next) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const { name, address } = req.body;
-    if (name !== undefined) user.name = name;
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 60) {
+        return res.status(400).json({ message: 'Name must be 2-60 characters' });
+      }
+      user.name = name.trim();
+    }
     if (address) {
       const fields = ['fullName', 'phone', 'address', 'city', 'postalCode', 'country'];
-      fields.forEach((field) => {
-        if (typeof address[field] === 'string') user.address[field] = address[field].trim();
-      });
+      for (const field of fields) {
+        if (address[field] === undefined) continue;
+        if (typeof address[field] !== 'string' || address[field].length > 200) {
+          return res.status(400).json({ message: `Invalid ${field}` });
+        }
+        user.address[field] = address[field].trim();
+      }
     }
 
     await user.save();
@@ -150,9 +172,10 @@ exports.resetPassword = async (req, res, next) => {
     user.passwordResetExpires = undefined;
     user.loginAttempts = 0;
     user.lockUntil = undefined;
+    user.tokenVersion += 1;
     await user.save();
 
-    logger.info(`Password reset for ${user.email}`);
+    logger.info(`Password reset for ${maskEmail(user.email)}`);
     res.status(200).json({ message: 'Password reset successful' });
   } catch (err) {
     next(err);
@@ -170,8 +193,11 @@ exports.changePassword = async (req, res, next) => {
     }
 
     user.password = req.body.newPassword;
+    user.tokenVersion += 1;
     await user.save();
-    res.status(200).json({ message: 'Password changed successfully' });
+
+    // Every other session is signed out; this one continues with a fresh token
+    res.status(200).json({ message: 'Password changed successfully', token: generateToken(user) });
   } catch (err) {
     next(err);
   }
@@ -196,8 +222,14 @@ exports.unlockUser = async (req, res, next) => {
 exports.deleteAccount = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const deletedUser = await User.findByIdAndDelete(userId);
-    if (!deletedUser) return res.status(404).json({ message: 'User not found' });
+    const user = await User.findById(userId).select('+password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (typeof req.body.password !== 'string' || !(await user.matchPassword(req.body.password))) {
+      return res.status(401).json({ message: 'Password is incorrect' });
+    }
+
+    await User.deleteOne({ _id: userId });
 
     await Promise.all([
       Cart.deleteOne({ userId }),

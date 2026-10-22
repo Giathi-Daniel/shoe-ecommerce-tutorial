@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const order = require('../controllers/orderController');
 const protect = require('../middleware/protect');
-const adminOnly = require('../middleware/adminOnly');
+const adminOnly = require('../middleware/adminOnly')
+const { writeLimiter } = require('../middleware/rateLimiter');
 
 router.use(protect);
 
-router.post('/', order.placeOrder);
+router.post('/', writeLimiter, order.placeOrder);
 router.get('/my', order.getMyOrders);
 router.get('/', adminOnly, order.getAllOrders);
 router.get('/:id', order.getOrderById);
