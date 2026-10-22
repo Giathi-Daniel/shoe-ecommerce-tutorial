@@ -78,3 +78,7 @@
     animation: none;
   }
 }
+
+.grecaptcha-badge {
+  visibility: hidden;
+}

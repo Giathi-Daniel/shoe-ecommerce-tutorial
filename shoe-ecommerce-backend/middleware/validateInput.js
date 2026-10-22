@@ -14,6 +14,9 @@ exports.validateRegister = [
   body('name').trim().isLength({ min: 2, max: 60 }).withMessage('Name must be 2-60 characters'),
   email,
   body('password')
+    .isLength({ max: 128 })
+    .withMessage('Password is too long')
+    .bail()
     .isStrongPassword()
     .withMessage('Password must be 8+ characters with uppercase, lowercase, number and symbol'),
   handleValidation,
@@ -21,7 +24,7 @@ exports.validateRegister = [
 
 exports.validateLogin = [
   email,
-  body('password').notEmpty().withMessage('Password is required'),
+  body('password').isString().isLength({ min: 1, max: 128 }).withMessage('Password is required'),
   handleValidation,
 ];
 
@@ -30,6 +33,9 @@ exports.validateEmail = [email, handleValidation];
 exports.validatePasswordChange = [
   body('currentPassword').notEmpty().withMessage('Current password is required'),
   body('newPassword')
+    .isLength({ max: 128 })
+    .withMessage('Password is too long')
+    .bail()
     .isStrongPassword()
     .withMessage('Password must be 8+ characters with uppercase, lowercase, number and symbol'),
   handleValidation,
@@ -37,6 +43,9 @@ exports.validatePasswordChange = [
 
 exports.validateReset = [
   body('password')
+    .isLength({ max: 128 })
+    .withMessage('Password is too long')
+    .bail()
     .isStrongPassword()
     .withMessage('Password must be 8+ characters with uppercase, lowercase, number and symbol'),
   handleValidation,

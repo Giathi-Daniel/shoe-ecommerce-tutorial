@@ -44,7 +44,7 @@ npm run seed     # wipes products, carts, wish lists and orders, then loads samp
 npm run dev      # http://localhost:5000, check http://localhost:5000/api/health
 ```
 
-`npm run seed` is safe to re-run whenever you want a clean slate. It prints the demo logins:
+`npm run seed` is safe to re-run on a development database whenever you want a clean slate. It refuses to run when `NODE_ENV=production`, because it creates the known demo logins below:
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -56,10 +56,12 @@ npm run dev      # http://localhost:5000, check http://localhost:5000/api/health
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `MONGODB_URI` | yes | MongoDB connection string |
-| `JWT_SECRET` | yes | Secret used to sign login tokens |
+| `JWT_SECRET` | yes | Secret used to sign login tokens. At least 32 random characters (the API refuses to start in production otherwise) |
 | `PORT` | no | API port, default `5000` |
 | `NODE_ENV` | no | `development` shows error stacks; use `production` when deployed |
 | `JWT_EXPIRES_IN` | no | Token lifetime, default `7d` |
+| `RECAPTCHA_SECRET_KEY` | production | reCAPTCHA v3 secret. Protects register, login and forgot-password. Skipped locally when empty, required in production |
+| `RECAPTCHA_MIN_SCORE` | no | Minimum score from 0 to 1, default `0.5` |
 | `CLIENT_URL` | no | Storefront origin for CORS, reset links and payment redirects, default `http://localhost:5173` |
 | `EMAIL_USER`, `EMAIL_PASS` | no | Gmail address and app password for password-reset emails. Without them the reset link is printed in the API log |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | no | Enables card payments |
@@ -76,6 +78,13 @@ npm run dev      # http://localhost:5173
 ```
 
 The dev server renders pages on the server (SSR) and proxies `/api` requests to `http://localhost:5000`, so no frontend configuration is needed locally.
+
+### Storefront variables (`shoe-ecommerce-frontend/.env`)
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `VITE_API_URL` | no | API origin for production builds. Leave empty locally |
+| `VITE_RECAPTCHA_SITE_KEY` | production | reCAPTCHA v3 site key, set **at build time**. Not needed locally |
 
 ## 5. Try it out
 
@@ -104,6 +113,9 @@ Even without the webhook, the order page confirms the payment when Stripe redire
 Restart the API after changing `.env`.
 
 ## 7. Production build
+
+Before going live, work through the checklist in [SECURITY.md](../SECURITY.md).
+
 
 ```bash
 cd shoe-ecommerce-frontend

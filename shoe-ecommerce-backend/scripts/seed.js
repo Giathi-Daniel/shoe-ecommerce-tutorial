@@ -110,6 +110,11 @@ const buildProduct = ([name, brand, category, price, compareAtPrice, photoId, co
 };
 
 async function seed() {
+  if (process.env.NODE_ENV === 'production' && !process.argv.includes('--force')) {
+    console.error('Refusing to seed in production: this deletes products, carts and orders and creates known demo logins.');
+    process.exit(1);
+  }
+
   await mongoose.connect(process.env.MONGODB_URI);
 
   await Promise.all([Product.deleteMany(), Cart.deleteMany(), Wishlist.deleteMany(), Order.deleteMany()]);

@@ -4,7 +4,13 @@ const errorHandler = (err, req, res, next) => {
   let status = err.statusCode || 500;
   let message = err.message || 'Server Error';
 
-  if (err.name === 'ValidationError') {
+  if (err.type === 'entity.parse.failed') {
+    status = 400;
+    message = 'Invalid JSON body';
+  } else if (err.message === 'Not allowed by CORS') {
+    status = 403;
+    message = 'Origin not allowed';
+  } else if (err.name === 'ValidationError') {
     status = 400;
     message = Object.values(err.errors).map((e) => e.message).join(', ');
   } else if (err.name === 'CastError') {

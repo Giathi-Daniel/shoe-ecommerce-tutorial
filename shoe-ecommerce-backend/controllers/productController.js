@@ -5,6 +5,15 @@ const User = require('../models/User');
 
 const MAX_PAGE_SIZE = 60;
 
+// Only these fields can be set by an admin request. Ratings and reviews are computed server-side.
+const EDITABLE_FIELDS = [
+  'name', 'description', 'shortDescription', 'price', 'compareAtPrice', 'category', 'mainImage',
+  'subImages', 'stock', 'brand', 'tags', 'colors', 'sizes', 'isFeatured',
+];
+
+const pickEditable = (body) =>
+  Object.fromEntries(EDITABLE_FIELDS.filter((field) => body[field] !== undefined).map((field) => [field, body[field]]));
+
 const SORT_OPTIONS = {
   'price-asc': { price: 1 },
   'price-desc': { price: -1 },
@@ -58,13 +67,13 @@ const buildQuery = (params) => {
 // POST /api/products
 exports.createProduct = async (req, res, next) => {
   try {
-    const { description } = req.body;
+    const data = pickEditable(req.body);
 
-    if (!req.body.shortDescription && description) {
-      req.body.shortDescription = description.split('. ').slice(0, 2).join('. ').replace(/\.?$/, '.');
+    if (!data.shortDescription && typeof data.description === 'string') {
+      data.shortDescription = data.description.split('. ').slice(0, 2).join('. ').replace(/\.?$/, '.');
     }
 
-    const product = await Product.create(req.body);
+    const product = await Product.create(data);
     res.status(201).json({ success: true, product });
   } catch (err) {
     next(err);
@@ -161,8 +170,7 @@ exports.updateProduct = async (req, res, next) => {
   try {
     if (!assertValidId(req.params.id, res)) return;
 
-    const { reviews, rating, numReviews, ...changes } = req.body;
-    const product = await Product.findByIdAndUpdate(req.params.id, changes, {
+    const product = await Product.findByIdAndUpdate(req.params.id, { $set: pickEditable(req.body) }, {
       new: true,
       runValidators: true,
     });
